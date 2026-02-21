@@ -28,6 +28,7 @@ export class Scene {
 
     // Layer objects
     this.grid  = new HexGrid()
+    this.grid.setActivePosition(new THREE.Vector3(0, 0, 0))
     this.scene.add(this.grid.group)
 
     this.xian  = new XianNode()
@@ -41,9 +42,9 @@ export class Scene {
     this._buildNetworkLines()
 
     // Camera orbit state
-    this._orbitTarget   = new THREE.Vector3(0, 0.8, 0)
+    this._orbitTarget   = new THREE.Vector3(0, 1.0, 0)
     this._orbitAngleH   = 0.4    // horizontal angle (radians)
-    this._orbitAngleV   = 0.58   // vertical angle
+    this._orbitAngleV   = 0.28   // ~16° elevation — cinematic low angle
     this._orbitRadius   = 8.5
     this._orbitGoalH    = this._orbitAngleH
     this._orbitGoalV    = this._orbitAngleV
@@ -114,7 +115,7 @@ export class Scene {
   _updateCamera(t) {
     if (this._autoOrbit) {
       this._orbitGoalH = 0.4 + Math.sin(t * 0.07) * 0.35
-      this._orbitGoalV = 0.55 + Math.sin(t * 0.04) * 0.05
+      this._orbitGoalV = 0.28 + Math.sin(t * 0.04) * 0.04
     }
     // Smooth lerp
     this._orbitAngleH += (this._orbitGoalH - this._orbitAngleH) * 0.04
@@ -309,6 +310,7 @@ export class Scene {
     const targetPos = def.pos.clone().add(new THREE.Vector3(0, 0.8, 0))
     this.xian.teleportTo(targetPos, callback)
     this.signalNodes.setActiveNode(nodeId)
+    this.grid.setActivePosition(def.pos)  // light up hex grid near 弦
   }
 
   // ── Main render loop ──────────────────────────────────────

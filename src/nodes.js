@@ -2,12 +2,12 @@ import * as THREE from 'three'
 
 // ─── Signal Node definitions ────────────────────────────────
 export const NODE_DEFS = [
-  { id: 'idle',     label: '共振场', color: 0x00d4ff, pos: new THREE.Vector3( 0.0,  0, 0.0) },
-  { id: 'chatting', label: '对话',   color: 0x4aff88, pos: new THREE.Vector3( 2.4,  0, 1.2) },
-  { id: 'working',  label: '处理',   color: 0xffbb00, pos: new THREE.Vector3(-2.8,  0, 1.6) },
-  { id: 'reading',  label: '检索',   color: 0xff7c35, pos: new THREE.Vector3( 2.8,  0,-2.2) },
-  { id: 'storage',  label: '记忆',   color: 0xff2d7a, pos: new THREE.Vector3(-2.8,  0,-2.2) },
-  { id: 'window',   label: '感知',   color: 0x9d7aff, pos: new THREE.Vector3( 0.0,  1.2,-3.2) },
+  { id: 'idle',     label: '共振场', color: 0x00d4ff, pos: new THREE.Vector3( 0.0,  0,  0.0) },
+  { id: 'chatting', label: '对话',   color: 0x4aff88, pos: new THREE.Vector3( 3.4,  0,  0.6) },
+  { id: 'working',  label: '处理',   color: 0xffbb00, pos: new THREE.Vector3(-3.6,  0,  1.8) },
+  { id: 'reading',  label: '检索',   color: 0xff7c35, pos: new THREE.Vector3( 3.6,  0, -2.8) },
+  { id: 'storage',  label: '记忆',   color: 0xff2d7a, pos: new THREE.Vector3(-3.6,  0, -2.8) },
+  { id: 'window',   label: '感知',   color: 0x9d7aff, pos: new THREE.Vector3( 0.0,  1.2, -4.0) },
 ]
 
 // ─── Signal Nodes scene layer ───────────────────────────────
@@ -36,23 +36,42 @@ export class SignalNodes {
     const group = new THREE.Group()
     group.position.copy(def.pos)
 
-    // Smooth circular platform (48 segments)
-    const platGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.04, 48)
+    // ── Platform: semi-transparent disc + crisp torus ring ─
+    // Disc — subtle fill to ground the node visually
+    const platGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.01, 48)
     const platMat = new THREE.MeshBasicMaterial({
-      color: def.color, transparent: true, opacity: 0.20,
+      color: def.color, transparent: true, opacity: 0.06,
     })
     const platform = new THREE.Mesh(platGeo, platMat)
     group.add(platform)
 
-    // Platform edge glow (torus outline)
-    const ringGeo = new THREE.TorusGeometry(0.68, 0.028, 8, 64)
+    // Torus ring — the crisp defining edge
+    // Torus ring — clearly subordinate satellites around the core
+    const ringGeo = new THREE.TorusGeometry(0.44, 0.085, 12, 64)
     const ringMat = new THREE.MeshBasicMaterial({
-      color: def.color, transparent: true, opacity: 0.55,
+      color: def.color, transparent: true, opacity: 0.88,
     })
     const ring = new THREE.Mesh(ringGeo, ringMat)
     ring.rotation.x = Math.PI / 2
-    ring.position.y = 0.02
+    ring.position.y = 0.01
     group.add(ring)
+
+    // Minimal floor glow — tiny sprite ONLY under icon sphere
+    const hc = document.createElement('canvas'); hc.width = hc.height = 64
+    const hctx = hc.getContext('2d')
+    const r = (def.color >> 16) & 0xff, g = (def.color >> 8) & 0xff, b = def.color & 0xff
+    const hg = hctx.createRadialGradient(32,32,0,32,32,32)
+    hg.addColorStop(0, `rgba(${r},${g},${b},0.50)`)
+    hg.addColorStop(1, `rgba(${r},${g},${b},0)`)
+    hctx.fillStyle = hg; hctx.fillRect(0,0,64,64)
+    const haloMat = new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(hc), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.6,
+    })
+    const halo = new THREE.Sprite(haloMat)
+    halo.scale.setScalar(0.5)
+    halo.position.y = 0.02
+    group.add(halo)
 
     // Vertical line from ground up (signal pillar)
     const pillarPts = [new THREE.Vector3(0, 0.02, 0), new THREE.Vector3(0, 0.5, 0)]
@@ -78,7 +97,7 @@ export class SignalNodes {
     group.add(sprite)
 
     return {
-      group, platform, ring, pillar, icon, sprite,
+      group, platform, ring, pillar, icon, sprite, halo, haloMat,
       platMat, ringMat, pillarMat, iconMat,
       def,
       baseIconY: 0.55,
@@ -124,10 +143,13 @@ export class SignalNodes {
     this._active = id
     for (const node of this.nodes) {
       const isActive = node.def.id === id
-      node.platMat.opacity  = isActive ? 0.38 : 0.18
-      node.ringMat.opacity  = isActive ? 0.90 : 0.45
-      node.pillarMat.opacity = isActive ? 0.65 : 0.28
-      node.iconMat.opacity  = isActive ? 1.00 : 0.70
+      node.platMat.opacity  = isActive ? 0.12 : 0.02
+      node.ringMat.opacity  = isActive ? 1.00 : 0.22
+      node.pillarMat.opacity = isActive ? 0.65 : 0.12
+      node.iconMat.opacity  = isActive ? 1.00 : 0.40
+      node.haloMat.opacity  = isActive ? 0.80 : 0.20
+      node.halo.scale.setScalar(isActive ? 0.7 : 0.35)
+      node.sprite.material.opacity = isActive ? 1.0 : 0.35
     }
   }
 
@@ -168,8 +190,14 @@ export class SignalNodes {
       const bob      = isActive ? 0.08 : 0.04
       node.icon.position.y = node.baseIconY + Math.sin(t * speed) * bob
 
-      // Spin glow ring
+      // Spin torus ring
       node.ring.rotation.z = t * (isActive ? 0.6 : 0.25)
+
+      // Breathe halo — pulse scale and opacity
+      const pulse = Math.sin(t * (isActive ? 1.8 : 0.9) + node.def.pos.x) * 0.12
+      const baseScale = isActive ? 0.7 : 0.5
+      node.halo.scale.setScalar(baseScale + pulse)
+      node.haloMat.opacity = (isActive ? 0.9 : 0.55) + pulse * 0.3
     }
   }
 }

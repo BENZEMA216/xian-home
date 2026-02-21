@@ -94,7 +94,7 @@ export class XianNode {
 
     // Glow sprite (billboard radial gradient — cheap bloom substitute)
     this.glowSprite = this._makeGlowSprite(C.cyan)
-    this.glowSprite.scale.setScalar(1.4)
+    this.glowSprite.scale.setScalar(2.0)
 
     this.group.add(this.coreInner, this.coreOuter, this.glowSprite)
   }
@@ -229,9 +229,9 @@ export class XianNode {
     this.coreInner.scale.setScalar(s)
     this.coreOuter.scale.setScalar(s * 1.1)
     // Glow sprite breathes with core — larger so it bleeds past the string
-    const gs = 3.2 + Math.sin(t * 2.1) * 0.45
+    const gs = 5.5 + Math.sin(t * 2.1) * 0.7
     this.glowSprite.scale.setScalar(gs)
-    this.glowSprite.material.opacity = 0.75 + Math.sin(t * 1.8) * 0.15
+    this.glowSprite.material.opacity = 0.82 + Math.sin(t * 1.8) * 0.12
   }
 
   _updateStatusRing(t) {

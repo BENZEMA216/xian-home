@@ -48,11 +48,27 @@ export class HexGrid {
     return new THREE.Line(geo, mat)
   }
 
+  setActivePosition(pos) {
+    this._activePos = pos  // THREE.Vector3 of current 弦 position
+  }
+
   update(t) {
+    const ap = this._activePos
     for (const { node, dist } of this._hexes) {
-      const wave = Math.sin(t * 0.6 - dist * 0.28) * 0.5 + 0.5
-      const alpha = 0.06 + wave * 0.14
-      node.material.opacity = alpha
+      // Base ripple from center
+      const ripple = Math.sin(t * 0.6 - dist * 0.28) * 0.5 + 0.5
+      let alpha = 0.05 + ripple * 0.12
+
+      // Reactive glow near 弦's current position
+      if (ap) {
+        const dx = node.position.x - ap.x
+        const dz = node.position.z - ap.z
+        const d  = Math.sqrt(dx * dx + dz * dz)
+        const proximity = Math.max(0, 1 - d / 2.8)
+        alpha += proximity * proximity * 0.55
+      }
+
+      node.material.opacity = Math.min(alpha, 0.55)
     }
   }
 }
