@@ -51,7 +51,7 @@ export class Scene {
       new THREE.Vector2(window.innerWidth, window.innerHeight),
       /*strength*/  0.90,
       /*radius*/    0.18,
-      /*threshold*/ 0.15,
+      /*threshold*/ 0.28,
     )
     this.composer.addPass(this.bloomPass)
 
@@ -317,6 +317,7 @@ export class Scene {
 
       // Pulse opacity
       pkt.mesh.material.opacity = 0.0
+      pkt.mesh.children[0].material.opacity = 0.0   // kill glow sprite too
     }
   }
 

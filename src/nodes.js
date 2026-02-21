@@ -163,13 +163,17 @@ export class SignalNodes {
       node.ringMat.color.setHex(isActive ? node.def.color : inactiveColor)
       node.iconMat.color.setHex(isActive ? node.def.color : inactiveColor)
       node.haloMat.color.setHex(isActive ? node.def.color : inactiveColor)
-      node.platMat.opacity  = isActive ? 0.08 : 0.01
-      node.ringMat.opacity  = isActive ? 0.65 : 0.08
-      node.pillarMat.opacity = isActive ? 0.35 : 0.02
-      node.iconMat.opacity  = isActive ? 0.75 : 0.06
-      node.haloMat.opacity  = isActive ? 0.45 : 0.0
-      node.halo.scale.setScalar(isActive ? 0.7 : 0.0)
-      node.sprite.material.opacity = isActive ? 0.85 : 0.10
+      // Inactive: completely invisible — group.visible=false is the cleanest
+      node.group.visible = isActive
+      if (!isActive) return   // skip further property setting for invisible nodes
+      node.platMat.opacity   = 0.08
+      node.ringMat.opacity   = 0.65
+      node.pillarMat.opacity = 0.35
+      node.iconMat.opacity   = 0.75
+      node.haloMat.opacity   = 0.45
+      node.halo.visible = true
+      node.halo.scale.setScalar(0.7)
+      node.sprite.material.opacity = 0.85
     }
   }
 
@@ -278,9 +282,11 @@ export class SignalNodes {
 
       // Breathe halo — pulse scale and opacity
       const pulse = Math.sin(t * (isActive ? 1.8 : 0.9) + node.def.pos.x) * 0.12
-      const baseScale = isActive ? 0.7 : 0.0
+      if (!isActive) { node.group.visible = false; continue }
+      const baseScale = 0.7
+      node.halo.visible = true
       node.halo.scale.setScalar(baseScale + pulse)
-      node.haloMat.opacity = isActive ? (0.45 + pulse * 0.10) : 0.0
+      node.haloMat.opacity = 0.45 + pulse * 0.10
     }
   }
 }
