@@ -1,4 +1,7 @@
 import * as THREE from 'three'
+import { EffectComposer }  from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass }      from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { XianNode }    from './xian.js'
 import { HexGrid }     from './grid.js'
 import { SignalNodes, NODE_DEFS } from './nodes.js'
@@ -8,10 +11,10 @@ export class Scene {
   constructor(canvas, onNodeTap) {
     this.canvas = canvas
 
-    // Three.js core
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
+    // Three.js core — opaque for correct UnrealBloom
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    this.renderer.setClearColor(0x000000, 0)  // transparent — body gradient shows through
+    this.renderer.setClearColor(0x08080f, 1)
     this.renderer.setSize(window.innerWidth, window.innerHeight)
 
     this.scene  = new THREE.Scene()
@@ -40,6 +43,17 @@ export class Scene {
 
     this._buildParticles()
     this._buildNetworkLines()
+
+    // ── Post-processing: UnrealBloom ──────────────────────────
+    this.composer = new EffectComposer(this.renderer)
+    this.composer.addPass(new RenderPass(this.scene, this.camera))
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      /*strength*/  1.4,
+      /*radius*/    0.6,
+      /*threshold*/ 0.14,
+    )
+    this.composer.addPass(this.bloomPass)
 
     // Camera orbit state
     this._orbitTarget   = new THREE.Vector3(0, 1.0, 0)
@@ -108,6 +122,8 @@ export class Scene {
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(w, h)
+    this.composer.setSize(w, h)
+    this.bloomPass.resolution.set(w, h)
   }
 
   // ── Camera orbit ──────────────────────────────────────────
@@ -322,7 +338,7 @@ export class Scene {
     this.signalNodes.update(t)
     this._updateParticles(t)
     this._updateSignalPackets(t)
-    this.renderer.render(this.scene, this.camera)
+    this.composer.render()
   }
 
   dispose() {

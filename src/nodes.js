@@ -143,8 +143,8 @@ export class SignalNodes {
     this._active = id
     for (const node of this.nodes) {
       const isActive = node.def.id === id
-      node.platMat.opacity  = isActive ? 0.12 : 0.02
-      node.ringMat.opacity  = isActive ? 1.00 : 0.22
+      node.platMat.opacity  = isActive ? 0.12 : 0.03
+      node.ringMat.opacity  = isActive ? 1.00 : 0.45
       node.pillarMat.opacity = isActive ? 0.65 : 0.12
       node.iconMat.opacity  = isActive ? 1.00 : 0.40
       node.haloMat.opacity  = isActive ? 0.80 : 0.20
