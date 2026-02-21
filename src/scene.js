@@ -49,18 +49,18 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera))
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /*strength*/  0.55,
-      /*radius*/    0.36,
+      /*strength*/  0.65,
+      /*radius*/    0.15,
       /*threshold*/ 0.20,
     )
     this.composer.addPass(this.bloomPass)
 
     // Camera orbit state
-    this._orbitTarget   = new THREE.Vector3(0, 1.3, 0)
-    this._orbitAngleH   = 0.4    // horizontal angle (radians)
-    this._orbitAngleV   = 0.32   // ~16° elevation — cinematic low angle
+    this._orbitTarget   = new THREE.Vector3(0, 1.8, 0)
+    this._orbitAngleH   = 1.5708    // horizontal angle (radians)
+    this._orbitAngleV   = 0.45   // ~16° elevation — cinematic low angle
     this._orbitRadius   = 8.5
-    this._orbitGoalH    = this._orbitAngleH
+    this._orbitGoalH    = 1.5708
     this._orbitGoalV    = this._orbitAngleV
     this._dragStart     = null
     this._autoOrbit     = true
@@ -132,8 +132,8 @@ export class Scene {
 
   _updateCamera(t) {
     if (this._autoOrbit) {
-      this._orbitGoalH = 0.4 + Math.sin(t * 0.07) * 0.35
-      this._orbitGoalV = 0.32 + Math.sin(t * 0.04) * 0.04
+      this._orbitGoalH = 1.5708 + Math.sin(t * 0.05) * 0.20
+      this._orbitGoalV = 0.45 + Math.sin(t * 0.04) * 0.03
     }
     // Smooth lerp
     this._orbitAngleH += (this._orbitGoalH - this._orbitAngleH) * 0.04

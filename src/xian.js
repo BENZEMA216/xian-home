@@ -15,9 +15,9 @@ const C = {
 export class XianNode {
   constructor() {
     this.group = new THREE.Group()
-    this.state = 'idle'   // idle | chatting | working | thinking
+    this.state = 'idle'
     this.beads = []
-    this._beadGeo = new THREE.SphereGeometry(1, 7, 7)
+    this._beadGeo = new THREE.SphereGeometry(1, 8, 8)
 
     this._buildString()
     this._buildCore()
@@ -30,66 +30,60 @@ export class XianNode {
 
   _buildString() {
     const N = 60
-    const L = 2.6   // horizontal span along X axis
+    const L = 4.0
+    this._waveN = N
+    this._waveL = L
 
+    // Pre-allocate 60 Vector3 for the wave shape
+    this._wavePoints = []
     for (let i = 0; i < N; i++) {
-      const t = i / (N - 1)
-      const baseX = t * L - L / 2   // ← string runs LEFT–RIGHT (X axis)
-      const envelope = Math.sin(t * Math.PI)
-      const r = 0.10 + envelope * 0.18   // visible rope of white beads
-      const alpha = 0.80 + envelope * 0.20   // nearly fully opaque everywhere
+      this._wavePoints.push(new THREE.Vector3((i / (N - 1)) * L - L / 2, 0, 0))
+    }
 
-      // Pure white: stands out clearly against colored nodes
-      const beadColor = 0xffffff
+    // ── Spine tube — rebuilt each frame from wave points ──────
+    this._tubeMat = new THREE.MeshBasicMaterial({
+      color: C.white, transparent: true, opacity: 0.92,
+    })
+    const initCurve = new THREE.CatmullRomCurve3(this._wavePoints.map(v => v.clone()))
+    this.spineTube = new THREE.Mesh(
+      new THREE.TubeGeometry(initCurve, N, 0.18, 8, false),
+      this._tubeMat,
+    )
+    this.group.add(this.spineTube)
 
+    // ── 9 marker beads at evenly spaced positions ─────────────
+    // Bright white, size proportional to envelope (center = largest)
+    // Gaps between beads guarantee individual visibility
+    const MARKERS = 9
+    for (let k = 0; k < MARKERS; k++) {
+      const norm = k / (MARKERS - 1)
+      const envelope = Math.sin(norm * Math.PI)
+      const r = 0.038 + envelope * 0.050   // max 0.088 at center
       const mat = new THREE.MeshBasicMaterial({
-        color: beadColor, transparent: true, opacity: alpha,
+        color: C.white, transparent: true, opacity: 0.95,
       })
       const mesh = new THREE.Mesh(this._beadGeo, mat)
       mesh.scale.setScalar(r)
-      mesh.position.x = baseX   // rest position on X axis
+      mesh.position.x = norm * L - L / 2
       this.group.add(mesh)
-      this.beads.push({ mesh, t, envelope, baseX })  // store baseX
+      this.beads.push({ mesh, norm })
     }
-
-    // Bright anchor endpoints — at left & right tips
-    const anchorMat = new THREE.MeshBasicMaterial({ color: C.cyan })
-    for (const x of [-L / 2, L / 2]) {
-      const m = new THREE.Mesh(this._beadGeo, anchorMat)
-      m.scale.setScalar(0.055)
-      m.position.x = x
-      this.group.add(m)
-    }
-
-    // Spine line — connects all beads, makes the wave readable as a continuous string
-    const spinePositions = new Float32Array(N * 3)
-    const spineGeo = new THREE.BufferGeometry()
-    spineGeo.setAttribute('position', new THREE.BufferAttribute(spinePositions, 3))
-    const spineMat = new THREE.LineBasicMaterial({
-      color: 0xffffff, transparent: true, opacity: 1.0,
-    })
-    this.spineLine = new THREE.Line(spineGeo, spineMat)
-    this._spinePositions = spinePositions
-    this._spineN = N
-    this.group.add(this.spineLine)
   }
 
   _buildCore() {
-    // Inner nucleus — bright cyan-white (not pure white to reduce bloom overload)
-    const innerMat = new THREE.MeshBasicMaterial({ color: 0xccf0ff })
-    this.coreInner = new THREE.Mesh(new THREE.SphereGeometry(0.10, 16, 16), innerMat)
+    // Small bright nucleus — glows without overpowering
+    const innerMat = new THREE.MeshBasicMaterial({ color: 0xaaeeff })
+    this.coreInner = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), innerMat)
 
-    // Outer halo (cyan, transparent)
+    // Outer halo — subtle, low opacity
     const outerMat = new THREE.MeshBasicMaterial({
-      color: C.cyan,
-      transparent: true,
-      opacity: 0.18,
+      color: C.cyan, transparent: true, opacity: 0.12,
     })
-    this.coreOuter = new THREE.Mesh(new THREE.SphereGeometry(0.26, 16, 16), outerMat)
+    this.coreOuter = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), outerMat)
 
-    // Glow sprite (billboard radial gradient — cheap bloom substitute)
+    // Glow sprite — tiny, just a soft accent dot
     this.glowSprite = this._makeGlowSprite(C.cyan)
-    this.glowSprite.scale.setScalar(0.4)
+    this.glowSprite.scale.setScalar(0.28)
 
     this.group.add(this.coreInner, this.coreOuter, this.glowSprite)
   }
@@ -99,55 +93,43 @@ export class XianNode {
     const canvas = document.createElement('canvas')
     canvas.width = canvas.height = size
     const ctx = canvas.getContext('2d')
-
     const r = (color >> 16) & 0xff
     const g = (color >>  8) & 0xff
     const b =  color        & 0xff
-
     const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2)
-    grad.addColorStop(0.00, `rgba(255,255,255,0.90)`)
-    grad.addColorStop(0.10, `rgba(${r},${g},${b},0.75)`)
-    grad.addColorStop(0.35, `rgba(${r},${g},${b},0.25)`)
-    grad.addColorStop(0.70, `rgba(${r},${g},${b},0.06)`)
+    grad.addColorStop(0.00, `rgba(255,255,255,0.85)`)
+    grad.addColorStop(0.15, `rgba(${r},${g},${b},0.60)`)
+    grad.addColorStop(0.45, `rgba(${r},${g},${b},0.18)`)
+    grad.addColorStop(0.80, `rgba(${r},${g},${b},0.04)`)
     grad.addColorStop(1.00, `rgba(${r},${g},${b},0.00)`)
-
     ctx.fillStyle = grad
     ctx.fillRect(0, 0, size, size)
-
     const tex = new THREE.CanvasTexture(canvas)
-    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })
+    const mat = new THREE.SpriteMaterial({
+      map: tex, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    })
     return new THREE.Sprite(mat)
   }
 
   _buildRings() {
-    // Ring 1 — horizontal, cyan
-    const r1m = new THREE.MeshBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.60,
-    })
+    const r1m = new THREE.MeshBasicMaterial({ color: C.cyan,   transparent: true, opacity: 0.55 })
     this.ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.022, 8, 80), r1m)
     this.group.add(this.ring1)
 
-    // Ring 2 — tilted, purple
-    const r2m = new THREE.MeshBasicMaterial({
-      color: C.purple, transparent: true, opacity: 0.45,
-    })
+    const r2m = new THREE.MeshBasicMaterial({ color: C.purple, transparent: true, opacity: 0.40 })
     this.ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.016, 8, 80), r2m)
     this.ring2.rotation.set(Math.PI / 3, 0, Math.PI / 6)
     this.group.add(this.ring2)
 
-    // Ring 3 — perpendicular, white accent (smaller)
-    const r3m = new THREE.MeshBasicMaterial({
-      color: 0xaaddff, transparent: true, opacity: 0.40,
-    })
+    const r3m = new THREE.MeshBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.35 })
     this.ring3 = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.015, 8, 80), r3m)
     this.ring3.rotation.set(Math.PI / 2, Math.PI / 4, 0)
     this.group.add(this.ring3)
   }
 
   _buildStatusRing() {
-    const mat = new THREE.MeshBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.42,
-    })
+    const mat = new THREE.MeshBasicMaterial({ color: C.cyan, transparent: true, opacity: 0.40 })
     this.statusRing = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.015, 8, 64), mat)
     this.statusRing.rotation.x = Math.PI / 2
     this.statusRing.position.y = -1.1
@@ -155,9 +137,7 @@ export class XianNode {
   }
 
   _buildPointLight() {
-    // Emissive point light so 弦 illuminates the environment
-    this.light = new THREE.PointLight(C.cyan, 1.5, 8)
-    this.light.position.y = 0
+    this.light = new THREE.PointLight(C.cyan, 1.4, 8)
     this.group.add(this.light)
   }
 
@@ -165,19 +145,15 @@ export class XianNode {
 
   setState(state) {
     this.state = state
-    const stateColors = {
-      idle:     C.cyan,
-      chatting: C.green,
-      working:  C.amber,
-      thinking: C.purple,
-    }
-    const col = stateColors[state] ?? C.cyan
+    const colors = { idle: C.cyan, chatting: C.green, working: C.amber, thinking: C.purple }
+    const col = colors[state] ?? C.cyan
     this.statusRing.material.color.setHex(col)
     this.light.color.setHex(col)
-    // Rebuild glow sprite with new color
+    this._tubeMat.color.setHex(col)
     this.group.remove(this.glowSprite)
     this.glowSprite.material.dispose()
     this.glowSprite = this._makeGlowSprite(col)
+    this.glowSprite.scale.setScalar(0.28)
     this.group.add(this.glowSprite)
   }
 
@@ -191,7 +167,6 @@ export class XianNode {
     this._updateLight(t)
   }
 
-  /** Standing wave: displacement(y,t) = Σ Aₙ·sin(n·π·norm)·sin(ωₙ·t) */
   _updateWave(t) {
     const configs = {
       idle:     { harmonics: [[1, 1.00]],           speed: 1.0, amp: 0.55 },
@@ -200,25 +175,30 @@ export class XianNode {
       thinking: { harmonics: [[1, 1.00],[3, 0.35]], speed: 1.3, amp: 0.50 },
     }
     const { harmonics, speed, amp } = configs[this.state]
+    const N = this._waveN, L = this._waveL
 
-    let i = 0
-    for (const { mesh, t: norm, envelope, baseX } of this.beads) {
-      // Horizontal string: bead rests on X axis, wave displaces in Y (vertical) and Z (depth)
+    for (let i = 0; i < N; i++) {
+      const norm = i / (N - 1)
+      const envelope = Math.sin(norm * Math.PI)
       let yD = 0, zD = 0
       for (const [n, w] of harmonics) {
-        const spatial = Math.sin(n * Math.PI * norm)   // standing wave mode
         const phase = t * speed * (n === 1 ? 1.0 : 1.6)
-        yD += w * spatial * Math.sin(phase)        * amp * envelope
-        zD += w * spatial * Math.sin(phase + 1.57) * amp * 0.40 * envelope
+        yD += w * Math.sin(n * Math.PI * norm) * Math.sin(phase) * amp * envelope
+        zD += w * Math.sin(n * Math.PI * norm) * Math.sin(phase + 1.57) * amp * 0.35 * envelope
       }
-      mesh.position.set(baseX, yD, zD)
-      // Update spine
-      this._spinePositions[i * 3 + 0] = baseX
-      this._spinePositions[i * 3 + 1] = yD
-      this._spinePositions[i * 3 + 2] = zD
-      i++
+      this._wavePoints[i].set(norm * L - L / 2, yD, zD)
     }
-    this.spineLine.geometry.attributes.position.needsUpdate = true
+
+    // Rebuild spine tube (cheap: 60 pts × 7 radial = 420 tris)
+    const curve = new THREE.CatmullRomCurve3(this._wavePoints)
+    const newGeo = new THREE.TubeGeometry(curve, N, 0.18, 8, false)
+    this.spineTube.geometry.dispose()
+    this.spineTube.geometry = newGeo
+
+    // Snap beads to wave positions
+    for (const { mesh, norm } of this.beads) {
+      mesh.position.copy(this._wavePoints[Math.round(norm * (N - 1))])
+    }
   }
 
   _updateRings(t) {
@@ -233,65 +213,45 @@ export class XianNode {
     const s = 0.88 + Math.sin(t * 2.1) * 0.08 + Math.sin(t * 0.65) * 0.04
     this.coreInner.scale.setScalar(s)
     this.coreOuter.scale.setScalar(s * 1.1)
-    // Glow sprite breathes with core — larger so it bleeds past the string
-    const gs = 0.30 + Math.sin(t * 2.1) * 0.05
+    const gs = 0.28 + Math.sin(t * 2.1) * 0.04
     this.glowSprite.scale.setScalar(gs)
-    this.glowSprite.material.opacity = 0.10 + Math.sin(t * 1.8) * 0.04
+    this.glowSprite.material.opacity = 0.09 + Math.sin(t * 1.8) * 0.03
   }
 
   _updateStatusRing(t) {
-    this.statusRing.rotation.z =  t * 0.30
+    this.statusRing.rotation.z = t * 0.30
     const p = 1.0 + Math.sin(t * 1.8) * 0.07
     this.statusRing.scale.set(p, p, 1)
   }
 
   _updateLight(t) {
-    this.light.intensity = 1.3 + Math.sin(t * 2.2) * 0.25
+    this.light.intensity = 1.2 + Math.sin(t * 2.2) * 0.22
   }
 
-  // ── Teleport transition ───────────────────────────────────
+  // ── Teleport ───────────────────────────────────────────────
 
   teleportTo(targetPos, onComplete) {
     const startScale = this.group.scale.x
-    const duration   = 520   // ms — slightly longer for drama
+    const duration   = 520
     const start      = performance.now()
-
     const animate = (now) => {
-      const elapsed = now - start
-      const pct = Math.min(elapsed / duration, 1)
-
+      const pct = Math.min((now - start) / duration, 1)
       if (pct < 0.40) {
-        // Phase 1: compress to a bright point
-        const t = pct / 0.40
-        const ease = 1 - Math.pow(1 - t, 2)
-        const s = startScale * (1 - ease * 0.98)
-        this.group.scale.setScalar(Math.max(s, 0.01))
-        // Glow pulses bright during collapse
-        if (this.glowSprite) {
-          this.glowSprite.material.opacity = 0.25 + ease * 0.15
-        }
+        const ease = 1 - Math.pow(1 - pct / 0.40, 2)
+        this.group.scale.setScalar(Math.max(startScale * (1 - ease * 0.98), 0.01))
+        this.glowSprite.material.opacity = 0.12 + ease * 0.10
       } else if (pct < 0.46) {
-        // Phase 2: snap to destination
         this.group.scale.setScalar(0.01)
         this.group.position.set(targetPos.x, targetPos.y, targetPos.z)
-        if (this.glowSprite) this.glowSprite.material.opacity = 0.35
+        this.glowSprite.material.opacity = 0.22
       } else {
-        // Phase 3: spring expand with bounce overshoot
-        const t = (pct - 0.46) / 0.54
-        // Spring: overshoot then settle
-        const spring = 1 + Math.exp(-t * 8) * Math.cos(t * 14) * 0.35
+        const tp = (pct - 0.46) / 0.54
+        const spring = 1 + Math.exp(-tp * 8) * Math.cos(tp * 14) * 0.35
         this.group.scale.setScalar(Math.max(0, spring) * startScale)
-        if (this.glowSprite) {
-          this.glowSprite.material.opacity = 0.20 + Math.sin(t * Math.PI) * 0.18
-        }
+        this.glowSprite.material.opacity = 0.09 + Math.sin(tp * Math.PI) * 0.12
       }
-
-      if (pct < 1) {
-        requestAnimationFrame(animate)
-      } else {
-        this.group.scale.setScalar(startScale)
-        onComplete?.()
-      }
+      if (pct < 1) requestAnimationFrame(animate)
+      else { this.group.scale.setScalar(startScale); onComplete?.() }
     }
     requestAnimationFrame(animate)
   }
