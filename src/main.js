@@ -257,6 +257,30 @@ function moodIcon(mood) {
   return icons[mood] ?? '◈'
 }
 
+// ─── Ambient input bar ────────────────────────────────────
+
+const ambientText = document.getElementById('ambientText')
+const ambientSend = document.getElementById('ambientSend')
+
+function submitAmbient() {
+  const msg = ambientText.value.trim()
+  if (!msg) return
+  ambientText.value = ''
+  // Open chat panel and inject the message
+  if (!chatPanel.classList.contains('open')) {
+    chatPanel.classList.add('open')
+    chatToggleBtn.classList.add('active')
+  }
+  // Trigger send via the chat input
+  chatInput.value = msg
+  chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+}
+
+ambientSend.addEventListener('click', submitAmbient)
+ambientText.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); submitAmbient() }
+})
+
 // ─── Animation loop ───────────────────────────────────────
 
 let startTime = performance.now()

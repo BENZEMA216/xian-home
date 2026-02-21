@@ -81,7 +81,7 @@ export class XianNode {
     for (let k = 0; k < MARKERS; k++) {
       const norm = k / (MARKERS - 1)
       const envelope = Math.sin(norm * Math.PI)
-      const r = 0.018 + envelope * 0.018   // endpoints 0.055, center 0.11 — always visible
+      const r = 0.022 + envelope * 0.028   // endpoints small, center bead larger — clear nodes
       const mat = new THREE.MeshBasicMaterial({
         color: C.white, transparent: true, opacity: 0.95,
       })
@@ -148,6 +148,23 @@ export class XianNode {
     this.statusRing.rotation.x = Math.PI / 2
     this.statusRing.position.y = -1.1
     this.group.add(this.statusRing)
+
+    // Grounding beam: thin cylinder always visible regardless of camera angle
+    this._beamMat = new THREE.MeshBasicMaterial({
+      color: C.cyan, transparent: true, opacity: 0.22,
+    })
+    // Cylinder from y=0 to y=-1.1 → height=1.1, centered at y=-0.55
+    const beamGeo = new THREE.CylinderGeometry(0.006, 0.012, 1.1, 6, 1)
+    const beamMesh = new THREE.Mesh(beamGeo, this._beamMat)
+    beamMesh.position.y = -0.55
+    this.group.add(beamMesh)
+
+    // Ground glow pool: large soft sprite under statusRing
+    this.groundGlow = this._makeGlowSprite(C.cyan)
+    this.groundGlow.scale.setScalar(3.2)
+    this.groundGlow.material.opacity = 0.07
+    this.groundGlow.position.y = -1.1
+    this.group.add(this.groundGlow)
   }
 
   _buildPointLight() {
@@ -249,6 +266,20 @@ export class XianNode {
     // Core wire pulses brighter at wave peaks
     const wavePeak = Math.abs(Math.sin(t * 1.0))  // 0..1 following wave
     this._tubeMat.opacity = 0.88 + wavePeak * 0.10
+
+    // Ring slow spin + pulse
+    if (this.statusRing) {
+      this.statusRing.rotation.z = t * 0.4
+      this.statusRing.material.opacity = 0.30 + Math.sin(t * 1.8) * 0.12
+    }
+
+    // Beam + ground glow breathe in sync with wave
+    if (this._beamMat) this._beamMat.opacity = 0.14 + Math.sin(t * 1.0) * 0.08
+    if (this.groundGlow) {
+      this.groundGlow.material.opacity = 0.05 + Math.sin(t * 1.0) * 0.03
+      const gs = 3.0 + Math.sin(t * 0.7) * 0.4
+      this.groundGlow.scale.setScalar(gs)
+    }
   }
 
   _updateStatusRing(t) {

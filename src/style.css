@@ -490,3 +490,112 @@ html, body {
     rgba(3, 2, 14, 0.72) 100%
   );
 }
+
+/* ── Bottom hint ──────────────────────────────────────────── */
+#bottomHint {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  animation: hintFade 3s ease-in-out infinite;
+  z-index: 5;
+}
+.hint-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+  animation: hintPulse 2s ease-in-out infinite;
+}
+.hint-text {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: rgba(0,212,255,0.45);
+  text-transform: uppercase;
+  font-weight: 300;
+}
+@keyframes hintFade {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1.0; }
+}
+@keyframes hintPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50%       { transform: scale(1.4); opacity: 1; }
+}
+
+/* ── Ambient Input Bar ──────────────────────────────────────── */
+#ambientInput {
+  position: fixed;
+  bottom: max(28px, env(safe-area-inset-bottom, 28px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(540px, 90vw);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(6, 4, 20, 0.60);
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  border-radius: 28px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 0 24px rgba(0,212,255,0.06), 0 4px 24px rgba(0,0,0,0.4), 0 -40px 80px rgba(0,212,255,0.04);
+  z-index: 20;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+#ambientInput:focus-within {
+  border-color: rgba(0, 212, 255, 0.45);
+  box-shadow: 0 0 36px rgba(0,212,255,0.14), 0 4px 24px rgba(0,0,0,0.5);
+}
+.ai-pulse-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  flex-shrink: 0;
+  animation: hintPulse 2.4s ease-in-out infinite;
+}
+#ambientText {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 1.5px;
+  color: rgba(220, 240, 255, 0.9);
+  caret-color: var(--cyan);
+}
+#ambientText::placeholder {
+  color: rgba(0, 212, 255, 0.30);
+  letter-spacing: 2px;
+}
+#ambientSend {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(0, 212, 255, 0.45);
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+#ambientSend:hover { color: var(--cyan); }
+#ambientSend svg { width: 18px; height: 18px; }
+
+/* Bridge glow from input bar up toward ellipse */
+#ambientInput::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 80px;
+  background: linear-gradient(to top, rgba(0,212,255,0.20), transparent);
+  pointer-events: none;
+}

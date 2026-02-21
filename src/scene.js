@@ -35,7 +35,7 @@ export class Scene {
     this.scene.add(this.grid.group)
 
     this.xian  = new XianNode()
-    this.xian.group.position.set(0, 1.8, 0)
+    this.xian.group.position.set(0, 1.6, 0)
     this.xian.group.scale.setScalar(1.9)
     this.scene.add(this.xian.group)
 
@@ -56,7 +56,7 @@ export class Scene {
     this.composer.addPass(this.bloomPass)
 
     // Camera orbit state
-    this._orbitTarget   = new THREE.Vector3(0, 1.9, 0)
+    this._orbitTarget   = new THREE.Vector3(0, 1.7, 0)
     this._orbitAngleH   = 1.5708    // horizontal angle (radians)
     this._orbitAngleV   = 0.45   // ~16° elevation — cinematic low angle
     this._orbitRadius   = 8.5
