@@ -16,7 +16,8 @@ export class SignalNodes {
     this.scene  = scene
     this.onTap  = onTap
     this.nodes  = []
-    this._active = 'idle'
+    this._active  = 'idle'
+    this._hovered = null
     this._raycaster = new THREE.Raycaster()
     this._mouse     = new THREE.Vector2()
 
@@ -158,29 +159,52 @@ export class SignalNodes {
   }
 
   // Hit-test on click/tap
-  handlePointer(event, camera, canvas) {
+  _hitTest(event, camera, canvas) {
     const rect = canvas.getBoundingClientRect()
     const cx   = event.clientX ?? event.touches?.[0]?.clientX
     const cy   = event.clientY ?? event.touches?.[0]?.clientY
-    if (cx == null) return
+    if (cx == null) return null
 
     this._mouse.set(
       ((cx - rect.left) / rect.width)  * 2 - 1,
       -((cy - rect.top) / rect.height) * 2 + 1,
     )
     this._raycaster.setFromCamera(this._mouse, camera)
-
-    const meshes = this.nodes.flatMap(n => [n.platform, n.icon])
+    const meshes = this.nodes.flatMap(n => [n.ring, n.icon])
     const hits   = this._raycaster.intersectObjects(meshes)
-    if (!hits.length) return
+    if (!hits.length) return null
 
     const hit = hits[0].object
     for (const node of this.nodes) {
-      if (node.platform === hit || node.icon === hit) {
-        this.onTap?.(node.def.id)
-        break
+      if (node.ring === hit || node.icon === hit) return node
+    }
+    return null
+  }
+
+  handleHover(event, camera, canvas) {
+    const node = this._hitTest(event, camera, canvas)
+    const hoveredId = node?.def?.id ?? null
+
+    if (hoveredId !== this._hovered) {
+      this._hovered = hoveredId
+      canvas.style.cursor = hoveredId ? 'pointer' : 'default'
+
+      // Boost hovered node ring
+      for (const n of this.nodes) {
+        const isHov = n.def.id === hoveredId
+        const isActive = n.def.id === this._active
+        if (!isActive) {
+          n.ringMat.opacity = isHov ? 0.75 : 0.45
+          n.sprite.material.opacity = isHov ? 0.8 : 0.35
+        }
       }
     }
+  }
+
+  handlePointer(event, camera, canvas) {
+    const node = this._hitTest(event, camera, canvas)
+    if (!node) return
+    this.onTap?.(node.def.id)
   }
 
   update(t) {

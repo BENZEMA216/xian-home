@@ -49,9 +49,9 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera))
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /*strength*/  1.1,
+      /*strength*/  0.88,
       /*radius*/    0.65,
-      /*threshold*/ 0.15,
+      /*threshold*/ 0.16,
     )
     this.composer.addPass(this.bloomPass)
 
@@ -85,6 +85,8 @@ export class Scene {
     // Tap / click for node selection
     c.addEventListener('click',      e => this._onTap(e))
     c.addEventListener('touchend',   e => this._onTap(e.changedTouches[0]), { passive: true })
+    // Hover for cursor + ring highlight
+    c.addEventListener('mousemove',  e => this.signalNodes?.handleHover(e, this.camera, c))
   }
 
   _onDragStart(pt) {
