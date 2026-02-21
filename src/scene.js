@@ -236,10 +236,10 @@ export class Scene {
       const color = nodeA.id === 'idle' ? nodeB.color : nodeA.color
       this._curves.push({ curve, color })
 
-      // Tube geometry
-      const tubeGeo = new THREE.TubeGeometry(curve, 30, 0.022, 5, false)
+      // Tube geometry — colored by the non-idle endpoint
+      const tubeGeo = new THREE.TubeGeometry(curve, 30, 0.020, 5, false)
       const tubeMat = new THREE.MeshBasicMaterial({
-        color: 0x00d4ff, transparent: true, opacity: 0.45,
+        color, transparent: true, opacity: 0.40,
       })
       this.scene.add(new THREE.Mesh(tubeGeo, tubeMat))
     }

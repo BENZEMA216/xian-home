@@ -54,10 +54,14 @@ export class HexGrid {
 
   update(t) {
     const ap = this._activePos
+    // Radar sweep — pulse expanding outward every 4s
+    const sweepRadius = (t % 4.0) / 4.0 * 14   // 0..14 world units
+    const sweepWidth  = 1.2
+
     for (const { node, dist } of this._hexes) {
       // Base ripple from center
-      const ripple = Math.sin(t * 0.6 - dist * 0.28) * 0.5 + 0.5
-      let alpha = 0.05 + ripple * 0.12
+      const ripple = Math.sin(t * 0.55 - dist * 0.25) * 0.5 + 0.5
+      let alpha = 0.045 + ripple * 0.10
 
       // Reactive glow near 弦's current position
       if (ap) {
@@ -65,10 +69,17 @@ export class HexGrid {
         const dz = node.position.z - ap.z
         const d  = Math.sqrt(dx * dx + dz * dz)
         const proximity = Math.max(0, 1 - d / 2.8)
-        alpha += proximity * proximity * 0.55
+        alpha += proximity * proximity * 0.50
       }
 
-      node.material.opacity = Math.min(alpha, 0.55)
+      // Radar sweep ring
+      const sweepDiff = Math.abs(dist - sweepRadius)
+      if (sweepDiff < sweepWidth) {
+        const sweepIntensity = (1 - sweepDiff / sweepWidth) * 0.45
+        alpha += sweepIntensity
+      }
+
+      node.material.opacity = Math.min(alpha, 0.65)
     }
   }
 }
