@@ -20,7 +20,7 @@ export class Scene {
     this.camera.lookAt(0, 0.5, 0)
 
     // Fog for depth
-    this.scene.fog = new THREE.FogExp2(0x0a0a0f, 0.055)
+    this.scene.fog = new THREE.FogExp2(0x0a0a0f, 0.038)
 
     // Ambient light
     const ambient = new THREE.AmbientLight(0x101828, 1.5)
@@ -32,15 +32,19 @@ export class Scene {
 
     this.xian  = new XianNode()
     this.xian.group.position.set(0, 0.8, 0)
+    this.xian.group.scale.setScalar(1.6)
     this.scene.add(this.xian.group)
 
     this.signalNodes = new SignalNodes(this.scene, onNodeTap)
 
+    this._buildParticles()
+    this._buildNetworkLines()
+
     // Camera orbit state
-    this._orbitTarget   = new THREE.Vector3(0, 0.5, 0)
+    this._orbitTarget   = new THREE.Vector3(0, 0.8, 0)
     this._orbitAngleH   = 0.4    // horizontal angle (radians)
     this._orbitAngleV   = 0.58   // vertical angle
-    this._orbitRadius   = 9
+    this._orbitRadius   = 8.5
     this._orbitGoalH    = this._orbitAngleH
     this._orbitGoalV    = this._orbitAngleV
     this._dragStart     = null
@@ -125,6 +129,142 @@ export class Scene {
     this.camera.lookAt(this._orbitTarget)
   }
 
+  // ── Ambient particles ─────────────────────────────────────
+
+  _buildParticles() {
+    const COUNT = 80
+    const positions = new Float32Array(COUNT * 3)
+    this._particleData = []
+
+    for (let i = 0; i < COUNT; i++) {
+      const x = (Math.random() - 0.5) * 16
+      const y = Math.random() * 5 - 0.5
+      const z = (Math.random() - 0.5) * 16
+      positions[i * 3 + 0] = x
+      positions[i * 3 + 1] = y
+      positions[i * 3 + 2] = z
+      this._particleData.push({ x, baseY: y, z, speed: 0.08 + Math.random() * 0.14, phase: Math.random() * Math.PI * 2 })
+    }
+
+    // Circular sprite texture so particles render as dots, not squares
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 32
+    const ctx = canvas.getContext('2d')
+    const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16)
+    grad.addColorStop(0, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.4, 'rgba(0,212,255,0.8)')
+    grad.addColorStop(1, 'rgba(0,212,255,0)')
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, 32, 32)
+    const tex = new THREE.CanvasTexture(canvas)
+
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    const mat = new THREE.PointsMaterial({
+      map: tex, size: 0.12, transparent: true, opacity: 0.6,
+      sizeAttenuation: true, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+    this._particles = new THREE.Points(geo, mat)
+    this._particlePositions = positions
+    this.scene.add(this._particles)
+  }
+
+  _updateParticles(t) {
+    for (let i = 0; i < this._particleData.length; i++) {
+      const p = this._particleData[i]
+      // Drift upward, wrap around
+      let y = p.baseY + (t * p.speed) % 5.5
+      if (y > 5) y -= 5.5
+      this._particlePositions[i * 3 + 1] = y + Math.sin(t * 0.5 + p.phase) * 0.12
+      this._particlePositions[i * 3 + 0] = p.x + Math.sin(t * 0.3 + p.phase) * 0.08
+    }
+    this._particles.geometry.attributes.position.needsUpdate = true
+  }
+
+  // ── Network connection lines + signal packets ────────────
+
+  _buildNetworkLines() {
+    const pairs = [
+      ['idle', 'chatting'], ['idle', 'working'],
+      ['idle', 'reading'],  ['idle', 'storage'],
+      ['idle', 'window'],   ['chatting', 'working'],
+      ['reading', 'storage'],
+    ]
+
+    this._curves = []  // store for signal packet animation
+
+    for (const [a, b] of pairs) {
+      const nodeA = NODE_DEFS.find(d => d.id === a)
+      const nodeB = NODE_DEFS.find(d => d.id === b)
+      if (!nodeA || !nodeB) continue
+
+      const pa = nodeA.pos, pb = nodeB.pos
+      const mid = pa.clone().add(pb).multiplyScalar(0.5)
+      mid.y += 0.9
+
+      const curve = new THREE.CatmullRomCurve3([
+        pa.clone().add(new THREE.Vector3(0, 0.1, 0)),
+        mid,
+        pb.clone().add(new THREE.Vector3(0, 0.1, 0)),
+      ])
+
+      // Store curve with color for signal packets
+      const color = nodeA.id === 'idle' ? nodeB.color : nodeA.color
+      this._curves.push({ curve, color })
+
+      // Tube geometry
+      const tubeGeo = new THREE.TubeGeometry(curve, 30, 0.018, 5, false)
+      const tubeMat = new THREE.MeshBasicMaterial({
+        color: 0x00d4ff, transparent: true, opacity: 0.25,
+      })
+      this.scene.add(new THREE.Mesh(tubeGeo, tubeMat))
+    }
+
+    this._buildSignalPackets()
+  }
+
+  _buildSignalPackets() {
+    // 12 signal packets traveling along connections
+    const packetGeo = new THREE.SphereGeometry(0.065, 8, 8)
+    this._packets = []
+
+    for (let i = 0; i < 12; i++) {
+      const curveIdx = i % this._curves.length
+      const { color } = this._curves[curveIdx]
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true })
+      const mesh = new THREE.Mesh(packetGeo, mat)
+      this.scene.add(mesh)
+
+      this._packets.push({
+        mesh,
+        curveIdx,
+        // Stagger start times so they don't all move in sync
+        progress: (i / 12),
+        speed: 0.28 + Math.random() * 0.18,
+      })
+    }
+  }
+
+  _updateSignalPackets(t) {
+    for (const pkt of this._packets) {
+      pkt.progress += pkt.speed * 0.016  // ~60fps delta
+      if (pkt.progress > 1) {
+        // Pick a new random curve
+        pkt.progress = 0
+        pkt.curveIdx = Math.floor(Math.random() * this._curves.length)
+        const { color } = this._curves[pkt.curveIdx]
+        pkt.mesh.material.color.setHex(color)
+      }
+
+      const pos = this._curves[pkt.curveIdx].curve.getPoint(pkt.progress)
+      pkt.mesh.position.copy(pos)
+
+      // Pulse opacity
+      pkt.mesh.material.opacity = 0.6 + Math.sin(t * 6 + pkt.curveIdx) * 0.25
+    }
+  }
+
   // ── Move 弦 to a node position ────────────────────────────
 
   moveXianTo(nodeId, callback) {
@@ -142,6 +282,8 @@ export class Scene {
     this.grid.update(t)
     this.xian.update(t)
     this.signalNodes.update(t)
+    this._updateParticles(t)
+    this._updateSignalPackets(t)
     this.renderer.render(this.scene, this.camera)
   }
 

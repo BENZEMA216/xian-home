@@ -80,7 +80,7 @@ gateway.addEventListener('stateChange', ({ detail: { state } }) => {
       chat.setSubtitle('演示模式')
       break
     case 'disconnected':
-      setStatus('offline', '离线')
+      setStatus('demo', '重连中...')
       chat.setSubtitle('重连中...')
       break
   }
@@ -219,13 +219,19 @@ if (savedStateHost) {
   stateStream.connect(savedStateHost)
 }
 
+// Always start in demo mode visually; real connection upgrades it
+gateway.enterDemoMode()
+
 if (savedHost) {
   hostInput.value = savedHost
   portInput.value = String(savedPort)
   gateway.connect(savedHost, savedPort)
+  setTimeout(() => {
+    chat.appendMessage('尝试连接 Gateway...\n\n连接失败时自动进入演示模式。', 'xian')
+    chat.setThought('信号搜寻中...', '◌')
+  }, 800)
 } else {
-  // Enter demo on first visit
-  gateway.enterDemoMode()
+  // First visit — demo mode welcome
   setTimeout(() => {
     chat.appendMessage('信号就绪。\n\n我是弦。\n\n设置里接上 Gateway，或者就这样聊着也行。', 'xian')
     chat.setThought('共振场已激活', '◈')

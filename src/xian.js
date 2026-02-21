@@ -39,8 +39,14 @@ export class XianNode {
       const r = 0.013 + envelope * 0.024
       const alpha = 0.32 + envelope * 0.68
 
+      // Color gradient: cyan at center, purple at endpoints
+      const cR = Math.round(0x00 + (0xb1 - 0x00) * (1 - envelope))
+      const cG = Math.round(0xd4 + (0x4e - 0xd4) * (1 - envelope))
+      const cB = 0xff
+      const beadColor = (cR << 16) | (cG << 8) | cB
+
       const mat = new THREE.MeshBasicMaterial({
-        color: C.cyan,
+        color: beadColor,
         transparent: true,
         opacity: alpha,
       })
@@ -59,6 +65,18 @@ export class XianNode {
       m.position.y = y
       this.group.add(m)
     }
+
+    // Spine line — connects all beads, makes the wave readable as a continuous string
+    const spinePositions = new Float32Array(N * 3)
+    const spineGeo = new THREE.BufferGeometry()
+    spineGeo.setAttribute('position', new THREE.BufferAttribute(spinePositions, 3))
+    const spineMat = new THREE.LineBasicMaterial({
+      color: C.cyan, transparent: true, opacity: 0.65,
+    })
+    this.spineLine = new THREE.Line(spineGeo, spineMat)
+    this._spinePositions = spinePositions
+    this._spineN = N
+    this.group.add(this.spineLine)
   }
 
   _buildCore() {
@@ -74,22 +92,51 @@ export class XianNode {
     })
     this.coreOuter = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), outerMat)
 
-    this.group.add(this.coreInner, this.coreOuter)
+    // Glow sprite (billboard radial gradient — cheap bloom substitute)
+    this.glowSprite = this._makeGlowSprite(C.cyan)
+    this.glowSprite.scale.setScalar(1.4)
+
+    this.group.add(this.coreInner, this.coreOuter, this.glowSprite)
+  }
+
+  _makeGlowSprite(color) {
+    const size = 256
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = size
+    const ctx = canvas.getContext('2d')
+
+    const r = (color >> 16) & 0xff
+    const g = (color >>  8) & 0xff
+    const b =  color        & 0xff
+
+    const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2)
+    grad.addColorStop(0.00, `rgba(255,255,255,0.90)`)
+    grad.addColorStop(0.10, `rgba(${r},${g},${b},0.75)`)
+    grad.addColorStop(0.35, `rgba(${r},${g},${b},0.25)`)
+    grad.addColorStop(0.70, `rgba(${r},${g},${b},0.06)`)
+    grad.addColorStop(1.00, `rgba(${r},${g},${b},0.00)`)
+
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, size, size)
+
+    const tex = new THREE.CanvasTexture(canvas)
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })
+    return new THREE.Sprite(mat)
   }
 
   _buildRings() {
     // Ring 1 — horizontal, cyan
     const r1m = new THREE.MeshBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.40,
+      color: C.cyan, transparent: true, opacity: 0.60,
     })
-    this.ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.013, 8, 80), r1m)
+    this.ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.022, 8, 80), r1m)
     this.group.add(this.ring1)
 
     // Ring 2 — tilted, purple
     const r2m = new THREE.MeshBasicMaterial({
-      color: C.purple, transparent: true, opacity: 0.28,
+      color: C.purple, transparent: true, opacity: 0.45,
     })
-    this.ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.009, 8, 80), r2m)
+    this.ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.016, 8, 80), r2m)
     this.ring2.rotation.set(Math.PI / 3, 0, Math.PI / 6)
     this.group.add(this.ring2)
   }
@@ -124,6 +171,11 @@ export class XianNode {
     const col = stateColors[state] ?? C.cyan
     this.statusRing.material.color.setHex(col)
     this.light.color.setHex(col)
+    // Rebuild glow sprite with new color
+    this.group.remove(this.glowSprite)
+    this.glowSprite.material.dispose()
+    this.glowSprite = this._makeGlowSprite(col)
+    this.group.add(this.glowSprite)
   }
 
   // ── Animation ─────────────────────────────────────────────
@@ -139,13 +191,14 @@ export class XianNode {
   /** Standing wave: displacement(y,t) = Σ Aₙ·sin(n·π·norm)·sin(ωₙ·t) */
   _updateWave(t) {
     const configs = {
-      idle:     { harmonics: [[1, 1.00]],           speed: 1.0, amp: 0.28 },
-      chatting: { harmonics: [[2, 1.00]],           speed: 2.4, amp: 0.22 },
-      working:  { harmonics: [[3, 1.00]],           speed: 3.2, amp: 0.16 },
-      thinking: { harmonics: [[1, 1.00],[3, 0.35]], speed: 1.3, amp: 0.24 },
+      idle:     { harmonics: [[1, 1.00]],           speed: 1.0, amp: 0.48 },
+      chatting: { harmonics: [[2, 1.00]],           speed: 2.4, amp: 0.38 },
+      working:  { harmonics: [[3, 1.00]],           speed: 3.2, amp: 0.28 },
+      thinking: { harmonics: [[1, 1.00],[3, 0.35]], speed: 1.3, amp: 0.42 },
     }
     const { harmonics, speed, amp } = configs[this.state]
 
+    let i = 0
     for (const { mesh, t: norm, envelope, baseY } of this.beads) {
       let xD = 0, zD = 0
       for (const [n, w] of harmonics) {
@@ -156,7 +209,13 @@ export class XianNode {
         zD += w * spatial * Math.sin(pz) * amp * 0.30 * envelope
       }
       mesh.position.set(xD, baseY, zD)
+      // Update spine
+      this._spinePositions[i * 3 + 0] = xD
+      this._spinePositions[i * 3 + 1] = baseY
+      this._spinePositions[i * 3 + 2] = zD
+      i++
     }
+    this.spineLine.geometry.attributes.position.needsUpdate = true
   }
 
   _updateRings(t) {
@@ -169,6 +228,10 @@ export class XianNode {
     const s = 0.88 + Math.sin(t * 2.1) * 0.08 + Math.sin(t * 0.65) * 0.04
     this.coreInner.scale.setScalar(s)
     this.coreOuter.scale.setScalar(s * 1.1)
+    // Glow sprite breathes with core — larger so it bleeds past the string
+    const gs = 3.2 + Math.sin(t * 2.1) * 0.45
+    this.glowSprite.scale.setScalar(gs)
+    this.glowSprite.material.opacity = 0.75 + Math.sin(t * 1.8) * 0.15
   }
 
   _updateStatusRing(t) {

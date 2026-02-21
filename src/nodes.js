@@ -6,8 +6,8 @@ export const NODE_DEFS = [
   { id: 'chatting', label: '对话',   color: 0x4aff88, pos: new THREE.Vector3( 2.8,  0, 1.6) },
   { id: 'working',  label: '处理',   color: 0xffbb00, pos: new THREE.Vector3(-2.8,  0, 1.6) },
   { id: 'reading',  label: '检索',   color: 0xff7c35, pos: new THREE.Vector3( 2.8,  0,-2.2) },
-  { id: 'storage',  label: '记忆',   color: 0xff5584, pos: new THREE.Vector3(-2.8,  0,-2.2) },
-  { id: 'window',   label: '感知',   color: 0xffe566, pos: new THREE.Vector3( 0.0,  0,-3.8) },
+  { id: 'storage',  label: '记忆',   color: 0xff2d7a, pos: new THREE.Vector3(-2.8,  0,-2.2) },
+  { id: 'window',   label: '感知',   color: 0x9d7aff, pos: new THREE.Vector3( 0.0,  1.2,-3.2) },
 ]
 
 // ─── Signal Nodes scene layer ───────────────────────────────
@@ -36,18 +36,18 @@ export class SignalNodes {
     const group = new THREE.Group()
     group.position.copy(def.pos)
 
-    // Hexagonal platform
-    const platGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.04, 6)
+    // Smooth circular platform (48 segments)
+    const platGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.04, 48)
     const platMat = new THREE.MeshBasicMaterial({
-      color: def.color, transparent: true, opacity: 0.12,
+      color: def.color, transparent: true, opacity: 0.20,
     })
     const platform = new THREE.Mesh(platGeo, platMat)
     group.add(platform)
 
     // Platform edge glow (torus outline)
-    const ringGeo = new THREE.TorusGeometry(0.68, 0.018, 6, 40)
+    const ringGeo = new THREE.TorusGeometry(0.68, 0.028, 8, 64)
     const ringMat = new THREE.MeshBasicMaterial({
-      color: def.color, transparent: true, opacity: 0.30,
+      color: def.color, transparent: true, opacity: 0.55,
     })
     const ring = new THREE.Mesh(ringGeo, ringMat)
     ring.rotation.x = Math.PI / 2
@@ -116,10 +116,10 @@ export class SignalNodes {
     this._active = id
     for (const node of this.nodes) {
       const isActive = node.def.id === id
-      node.platMat.opacity  = isActive ? 0.25 : 0.10
-      node.ringMat.opacity  = isActive ? 0.70 : 0.25
-      node.pillarMat.opacity = isActive ? 0.50 : 0.18
-      node.iconMat.opacity  = isActive ? 1.00 : 0.55
+      node.platMat.opacity  = isActive ? 0.38 : 0.18
+      node.ringMat.opacity  = isActive ? 0.90 : 0.45
+      node.pillarMat.opacity = isActive ? 0.65 : 0.28
+      node.iconMat.opacity  = isActive ? 1.00 : 0.70
     }
   }
 
