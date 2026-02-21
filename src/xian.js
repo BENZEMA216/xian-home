@@ -47,7 +47,7 @@ export class XianNode {
     })
     const initCurve = new THREE.CatmullRomCurve3(this._wavePoints.map(v => v.clone()))
     this.spineTube = new THREE.Mesh(
-      new THREE.TubeGeometry(initCurve, N, 0.006, 6, false),
+      new THREE.TubeGeometry(initCurve, N, 0.009, 6, false),
       this._tubeMat,
     )
     this.group.add(this.spineTube)
@@ -65,11 +65,11 @@ export class XianNode {
 
     // Outer haze: even wider, very soft
     this._hazeTubeMat = new THREE.MeshBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.05,
+      color: C.cyan, transparent: true, opacity: 0.08,
       side: THREE.BackSide,
     })
     this.hazeTube = new THREE.Mesh(
-      new THREE.TubeGeometry(initCurve, N, 0.080, 8, false),
+      new THREE.TubeGeometry(initCurve, N, 0.160, 8, false),
       this._hazeTubeMat,
     )
     this.group.add(this.hazeTube)
@@ -100,7 +100,7 @@ export class XianNode {
 
     // No outer halo (removing visual noise)
     const outerMat = new THREE.MeshBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.05,
+      color: C.cyan, transparent: true, opacity: 0.08,
     })
     this.coreOuter = new THREE.Mesh(new THREE.SphereGeometry(0.10, 12, 12), outerMat)
 
@@ -210,13 +210,13 @@ export class XianNode {
     // Rebuild all 3 tube layers from the same curve
     const curve = new THREE.CatmullRomCurve3(this._wavePoints)
     // Core (thin bright white)
-    const coreGeo = new THREE.TubeGeometry(curve, N, 0.006, 6, false)
+    const coreGeo = new THREE.TubeGeometry(curve, N, 0.009, 6, false)
     this.spineTube.geometry.dispose(); this.spineTube.geometry = coreGeo
     // Glow layer (medium cyan)
     const glowGeo = new THREE.TubeGeometry(curve, N, 0.035, 8, false)
     this.glowTube.geometry.dispose(); this.glowTube.geometry = glowGeo
     // Haze layer (wide, very soft)
-    const hazeGeo = new THREE.TubeGeometry(curve, N, 0.080, 8, false)
+    const hazeGeo = new THREE.TubeGeometry(curve, N, 0.160, 8, false)
     this.hazeTube.geometry.dispose(); this.hazeTube.geometry = hazeGeo
 
     // Snap beads to wave positions
@@ -240,6 +240,15 @@ export class XianNode {
     const gs = 0.14 + Math.sin(t * 2.1) * 0.02
     this.glowSprite.scale.setScalar(gs)
     this.glowSprite.material.opacity = 0.06 + Math.sin(t * 1.8) * 0.02
+
+    // Traveling pulse: glow tube breathes like energy flowing through the string
+    const pulse = 0.18 + Math.sin(t * 1.8) * 0.06
+    this._glowTubeMat.opacity = pulse
+    this._hazeTubeMat.opacity = 0.06 + Math.sin(t * 1.2) * 0.025
+
+    // Core wire pulses brighter at wave peaks
+    const wavePeak = Math.abs(Math.sin(t * 1.0))  // 0..1 following wave
+    this._tubeMat.opacity = 0.88 + wavePeak * 0.10
   }
 
   _updateStatusRing(t) {
