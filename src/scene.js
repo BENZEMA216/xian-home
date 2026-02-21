@@ -14,7 +14,7 @@ export class Scene {
     // Three.js core — opaque for correct UnrealBloom
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    this.renderer.setClearColor(0x08080f, 1)
+    this.renderer.setClearColor(0x060410, 1)
     this.renderer.setSize(window.innerWidth, window.innerHeight)
 
     this.scene  = new THREE.Scene()
@@ -49,9 +49,9 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera))
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /*strength*/  1.4,
-      /*radius*/    0.6,
-      /*threshold*/ 0.14,
+      /*strength*/  1.1,
+      /*radius*/    0.65,
+      /*threshold*/ 0.15,
     )
     this.composer.addPass(this.bloomPass)
 
@@ -237,9 +237,9 @@ export class Scene {
       this._curves.push({ curve, color })
 
       // Tube geometry
-      const tubeGeo = new THREE.TubeGeometry(curve, 30, 0.018, 5, false)
+      const tubeGeo = new THREE.TubeGeometry(curve, 30, 0.022, 5, false)
       const tubeMat = new THREE.MeshBasicMaterial({
-        color: 0x00d4ff, transparent: true, opacity: 0.25,
+        color: 0x00d4ff, transparent: true, opacity: 0.45,
       })
       this.scene.add(new THREE.Mesh(tubeGeo, tubeMat))
     }
@@ -262,7 +262,7 @@ export class Scene {
     const glowTex = new THREE.CanvasTexture(sc)
 
     // 14 signal packets traveling along connections
-    const packetGeo = new THREE.SphereGeometry(0.055, 8, 8)
+    const packetGeo = new THREE.SphereGeometry(0.11, 8, 8)
     this._packets = []
 
     for (let i = 0; i < 14; i++) {
@@ -283,10 +283,10 @@ export class Scene {
         transparent: true,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        opacity: 0.7,
+        opacity: 0.95,
       })
       const glow = new THREE.Sprite(glowMat)
-      glow.scale.setScalar(0.7)
+      glow.scale.setScalar(1.1)
       mesh.add(glow)
 
       this.scene.add(mesh)
