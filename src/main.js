@@ -1,6 +1,7 @@
 import { Scene }         from './scene.js'
 import { GatewayClient }  from './gateway.js'
 import { ChatUI }         from './chat.js'
+import { StateStream }    from './state-stream.js'
 
 // ─── Bootstrap ──────────────────────────────────────────────
 
@@ -10,11 +11,14 @@ const statusText = document.getElementById('statusText')
 const settingsBtn   = document.getElementById('settingsBtn')
 const settingsPanel = document.getElementById('settingsPanel')
 const settingsClose = document.getElementById('settingsCloseBtn')
-const connectBtn    = document.getElementById('connectBtn')
-const demoBtn       = document.getElementById('demoBtn')
-const hostInput     = document.getElementById('gatewayHost')
-const portInput     = document.getElementById('gatewayPort')
-const infoEl        = document.getElementById('settingsInfo')
+const connectBtn      = document.getElementById('connectBtn')
+const demoBtn         = document.getElementById('demoBtn')
+const hostInput       = document.getElementById('gatewayHost')
+const portInput       = document.getElementById('gatewayPort')
+const infoEl          = document.getElementById('settingsInfo')
+const stateConnectBtn = document.getElementById('stateConnectBtn')
+const stateHostInput  = document.getElementById('stateHost')
+const stateStatusEl   = document.getElementById('stateStatus')
 
 // ─── State mapping: activity → signal node id ─────────────
 const activityToNode = {
@@ -151,6 +155,16 @@ connectBtn.addEventListener('click', () => {
   setTimeout(() => settingsPanel.classList.add('hidden'), 400)
 })
 
+stateConnectBtn.addEventListener('click', () => {
+  const host = stateHostInput.value.trim()
+  if (!host) { stateStatusEl.textContent = '请输入状态服务器地址'; return }
+  const url = host.startsWith('http') ? host : `http://${host}`
+  localStorage.setItem('xian_state_host', url)
+  stateStream.connect(url)
+  stateStatusEl.textContent = '连接中...'
+  setTimeout(() => settingsPanel.classList.add('hidden'), 400)
+})
+
 demoBtn.addEventListener('click', () => {
   gateway.enterDemoMode()
   settingsPanel.classList.add('hidden')
@@ -161,10 +175,49 @@ demoBtn.addEventListener('click', () => {
   }, 500)
 })
 
+// ─── State Stream (SSE from xian-state-server) ───────────
+
+const stateStream = new StateStream()
+
+stateStream.onStatus((type, msg) => {
+  if (stateStatusEl) {
+    stateStatusEl.textContent = msg
+    stateStatusEl.style.color = type === 'connected' ? '#4aff88' : type === 'error' ? '#ff4757' : '#5a5d70'
+  }
+})
+
+stateStream.onStateUpdate((s) => {
+  // Drive 3D scene from live state
+  const nodeId = activityToNode[s.activity] ?? 'idle'
+  if (nodeId !== currentNodeId) {
+    currentNodeId = nodeId
+    scene3d.moveXianTo(nodeId)
+  }
+  const xianStateMap = {
+    idle: 'idle', chatting: 'chatting', helping: 'chatting',
+    working: 'working', coding: 'working',
+    reading: 'thinking', resting: 'idle',
+  }
+  scene3d.xian.setState(xianStateMap[s.activity] ?? 'idle')
+
+  if (s.thought) chat.setThought(s.thought, moodIcon(s.mood))
+
+  // Update status dot to show which channel is active
+  if (s.channel && s.channel !== 'web') {
+    const channelLabel = { telegram: 'Telegram', feishu: '飞书', imessage: 'iMessage' }
+    chat.setSubtitle(`活跃于 ${channelLabel[s.channel] ?? s.channel}`)
+  }
+})
+
 // ─── Auto-restore connection ──────────────────────────────
 
 const savedHost = localStorage.getItem('xian_host')
 const savedPort = parseInt(localStorage.getItem('xian_port')) || 18789
+const savedStateHost = localStorage.getItem('xian_state_host')
+
+if (savedStateHost) {
+  stateStream.connect(savedStateHost)
+}
 
 if (savedHost) {
   hostInput.value = savedHost
@@ -188,6 +241,14 @@ function setStatus(type, label) {
 
 function settingsInfo(msg) {
   infoEl.textContent = msg
+}
+
+function moodIcon(mood) {
+  const icons = {
+    happy: '◉', thinking: '◌', sleepy: '◎',
+    excited: '⊛', missing: '⊕', satisfied: '◈', neutral: '◈',
+  }
+  return icons[mood] ?? '◈'
 }
 
 // ─── Animation loop ───────────────────────────────────────

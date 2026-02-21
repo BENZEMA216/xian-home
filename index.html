@@ -90,10 +90,18 @@
     </div>
     <div class="settings-body">
       <label>Gateway 地址</label>
-      <input type="text" id="gatewayHost" placeholder="192.168.x.x 或 hostname" />
-      <label>端口</label>
+      <input type="text" id="gatewayHost" placeholder="100.121.197.31 或 hostname" />
+      <label>Gateway 端口</label>
       <input type="number" id="gatewayPort" placeholder="18789" value="18789" />
-      <button id="connectBtn" class="primary-btn">连接</button>
+      <button id="connectBtn" class="primary-btn">连接 Gateway</button>
+
+      <div style="height:1px;background:rgba(0,212,255,0.1);margin:6px 0"></div>
+
+      <label>状态服务器（实时感知弦的活动）</label>
+      <input type="text" id="stateHost" placeholder="100.121.197.31:7432" />
+      <button id="stateConnectBtn" class="primary-btn" style="background:rgba(177,78,255,0.12);border-color:rgba(177,78,255,0.25);color:#b14eff">连接状态流</button>
+      <div class="state-stream-status" id="stateStatus" style="font-size:11px;color:#5a5d70;padding:2px 4px"></div>
+
       <button id="demoBtn" class="ghost-btn">演示模式</button>
       <div class="settings-info" id="settingsInfo"></div>
     </div>
