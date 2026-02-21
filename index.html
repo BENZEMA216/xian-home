@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>弦 · xián</title>
+  <script type="module" crossorigin src="/xian-home/assets/index-C7oHCWgh.js"></script>
+  <link rel="stylesheet" crossorigin href="/xian-home/assets/index-BRooNuHy.css">
+</head>
+<body>
+  <!-- Three.js canvas fills the background -->
+  <canvas id="canvas"></canvas>
+
+  <!-- Top status bar -->
+  <header id="topbar">
+    <div class="tb-left">
+      <div class="xian-dot" id="statusDot"></div>
+      <span class="xian-name">弦</span>
+      <span class="status-text" id="statusText">连接中...</span>
+    </div>
+    <div class="tb-right">
+      <button class="icon-btn" id="settingsBtn" title="设置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Thought bubble (current state overlay) -->
+  <div id="thoughtBubble" class="hidden">
+    <div class="thought-inner">
+      <span class="thought-icon" id="thoughtIcon">◈</span>
+      <span class="thought-text" id="thoughtText"></span>
+    </div>
+  </div>
+
+  <!-- Chat toggle button -->
+  <button id="chatToggleBtn" class="chat-fab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <span class="chat-unread hidden" id="unreadBadge">0</span>
+  </button>
+
+  <!-- Chat panel (slides up) -->
+  <div id="chatPanel" class="chat-panel hidden">
+    <div class="chat-panel-header">
+      <div class="chat-avatar">
+        <div class="avatar-wave" id="avatarWave"></div>
+      </div>
+      <div class="chat-panel-title">
+        <span class="chat-name">弦</span>
+        <span class="chat-subtitle" id="chatSubtitle">在线</span>
+      </div>
+      <button class="icon-btn" id="chatCloseBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <!-- messages rendered here -->
+    </div>
+    <div class="chat-input-row">
+      <textarea id="chatInput" placeholder="说点什么..." rows="1"></textarea>
+      <button id="sendBtn" class="send-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settingsPanel" class="settings-panel hidden">
+    <div class="settings-header">
+      <span>Gateway 配置</span>
+      <button class="icon-btn" id="settingsCloseBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="settings-body">
+      <label>Gateway 地址</label>
+      <input type="text" id="gatewayHost" placeholder="100.121.197.31 或 hostname" />
+      <label>Gateway 端口</label>
+      <input type="number" id="gatewayPort" placeholder="18789" value="18789" />
+      <button id="connectBtn" class="primary-btn">连接 Gateway</button>
+
+      <div style="height:1px;background:rgba(0,212,255,0.1);margin:6px 0"></div>
+
+      <label>状态服务器（实时感知弦的活动）</label>
+      <input type="text" id="stateHost" placeholder="100.121.197.31:7432" />
+      <button id="stateConnectBtn" class="primary-btn" style="background:rgba(177,78,255,0.12);border-color:rgba(177,78,255,0.25);color:#b14eff">连接状态流</button>
+      <div class="state-stream-status" id="stateStatus" style="font-size:11px;color:#5a5d70;padding:2px 4px"></div>
+
+      <button id="demoBtn" class="ghost-btn">演示模式</button>
+      <div class="settings-info" id="settingsInfo"></div>
+    </div>
+  </div>
+
+  <!-- Typing indicator -->
+  <div id="typingIndicator" class="typing-indicator hidden">
+    <span class="typing-dot"></span>
+    <span class="typing-dot"></span>
+    <span class="typing-dot"></span>
+  </div>
+
+</body>
+</html>
