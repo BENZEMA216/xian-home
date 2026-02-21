@@ -36,7 +36,7 @@ export class XianNode {
       const t = i / (N - 1)
       const baseX = t * L - L / 2   // ← string runs LEFT–RIGHT (X axis)
       const envelope = Math.sin(t * Math.PI)
-      const r = 0.045 + envelope * 0.085   // large enough to form a visible rope
+      const r = 0.08 + envelope * 0.14   // large enough to form a visible rope
       const alpha = 0.55 + envelope * 0.45   // all beads bright; center near opaque
 
       // Color gradient: cyan at center, purple at endpoints
@@ -69,7 +69,7 @@ export class XianNode {
     const spineGeo = new THREE.BufferGeometry()
     spineGeo.setAttribute('position', new THREE.BufferAttribute(spinePositions, 3))
     const spineMat = new THREE.LineBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.90,
+      color: 0xffffff, transparent: true, opacity: 1.0,
     })
     this.spineLine = new THREE.Line(spineGeo, spineMat)
     this._spinePositions = spinePositions

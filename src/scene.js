@@ -49,8 +49,8 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera))
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /*strength*/  0.85,
-      /*radius*/    0.45,
+      /*strength*/  0.72,
+      /*radius*/    0.42,
       /*threshold*/ 0.20,
     )
     this.composer.addPass(this.bloomPass)
@@ -58,7 +58,7 @@ export class Scene {
     // Camera orbit state
     this._orbitTarget   = new THREE.Vector3(0, 1.3, 0)
     this._orbitAngleH   = 0.4    // horizontal angle (radians)
-    this._orbitAngleV   = 0.28   // ~16° elevation — cinematic low angle
+    this._orbitAngleV   = 0.32   // ~16° elevation — cinematic low angle
     this._orbitRadius   = 8.5
     this._orbitGoalH    = this._orbitAngleH
     this._orbitGoalV    = this._orbitAngleV
@@ -133,7 +133,7 @@ export class Scene {
   _updateCamera(t) {
     if (this._autoOrbit) {
       this._orbitGoalH = 0.4 + Math.sin(t * 0.07) * 0.35
-      this._orbitGoalV = 0.28 + Math.sin(t * 0.04) * 0.04
+      this._orbitGoalV = 0.32 + Math.sin(t * 0.04) * 0.04
     }
     // Smooth lerp
     this._orbitAngleH += (this._orbitGoalH - this._orbitAngleH) * 0.04
@@ -151,7 +151,7 @@ export class Scene {
   // ── Ambient particles ─────────────────────────────────────
 
   _buildParticles() {
-    const COUNT = 220
+    const COUNT = 280
     const positions = new Float32Array(COUNT * 3)
     this._particleData = []
 
