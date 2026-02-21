@@ -149,14 +149,14 @@ export class Scene {
   // ── Ambient particles ─────────────────────────────────────
 
   _buildParticles() {
-    const COUNT = 80
+    const COUNT = 220
     const positions = new Float32Array(COUNT * 3)
     this._particleData = []
 
     for (let i = 0; i < COUNT; i++) {
-      const x = (Math.random() - 0.5) * 16
-      const y = Math.random() * 5 - 0.5
-      const z = (Math.random() - 0.5) * 16
+      const x = (Math.random() - 0.5) * 22
+      const y = Math.random() * 7 - 1.0
+      const z = (Math.random() - 0.5) * 22
       positions[i * 3 + 0] = x
       positions[i * 3 + 1] = y
       positions[i * 3 + 2] = z

@@ -139,6 +139,14 @@ export class XianNode {
     this.ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.016, 8, 80), r2m)
     this.ring2.rotation.set(Math.PI / 3, 0, Math.PI / 6)
     this.group.add(this.ring2)
+
+    // Ring 3 — perpendicular, white accent (smaller)
+    const r3m = new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.22,
+    })
+    this.ring3 = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.012, 8, 80), r3m)
+    this.ring3.rotation.set(Math.PI / 2, Math.PI / 4, 0)
+    this.group.add(this.ring3)
   }
 
   _buildStatusRing() {
@@ -222,6 +230,8 @@ export class XianNode {
     this.ring1.rotation.y =  t * 0.45
     this.ring2.rotation.y = -t * 0.62
     this.ring2.rotation.x = Math.PI / 3 + Math.sin(t * 0.17) * 0.12
+    this.ring3.rotation.z =  t * 0.31
+    this.ring3.rotation.x = Math.PI / 2 + Math.sin(t * 0.13) * 0.08
   }
 
   _updateCore(t) {
