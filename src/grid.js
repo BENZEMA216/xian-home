@@ -17,7 +17,7 @@ export class HexGrid {
     const mat = new THREE.LineBasicMaterial({
       color: 0x00d4ff,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.06,
     })
 
     for (let q = -RADIUS; q <= RADIUS; q++) {
@@ -75,7 +75,7 @@ export class HexGrid {
       // Radar sweep ring
       const sweepDiff = Math.abs(dist - sweepRadius)
       if (sweepDiff < sweepWidth) {
-        const sweepIntensity = (1 - sweepDiff / sweepWidth) * 0.45
+        const sweepIntensity = (1 - sweepDiff / sweepWidth) * 0.14
         alpha += sweepIntensity
       }
 

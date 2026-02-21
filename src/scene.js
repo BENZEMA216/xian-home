@@ -35,7 +35,7 @@ export class Scene {
     this.scene.add(this.grid.group)
 
     this.xian  = new XianNode()
-    this.xian.group.position.set(0, 1.5, 0)
+    this.xian.group.position.set(0, 1.8, 0)
     this.xian.group.scale.setScalar(1.9)
     this.scene.add(this.xian.group)
 
@@ -49,14 +49,14 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera))
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /*strength*/  0.65,
-      /*radius*/    0.15,
-      /*threshold*/ 0.20,
+      /*strength*/  0.90,
+      /*radius*/    0.18,
+      /*threshold*/ 0.15,
     )
     this.composer.addPass(this.bloomPass)
 
     // Camera orbit state
-    this._orbitTarget   = new THREE.Vector3(0, 1.8, 0)
+    this._orbitTarget   = new THREE.Vector3(0, 1.9, 0)
     this._orbitAngleH   = 1.5708    // horizontal angle (radians)
     this._orbitAngleV   = 0.45   // ~16° elevation — cinematic low angle
     this._orbitRadius   = 8.5
@@ -180,7 +180,7 @@ export class Scene {
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     const mat = new THREE.PointsMaterial({
-      map: tex, size: 0.12, transparent: true, opacity: 0.6,
+      map: tex, size: 0.08, transparent: true, opacity: 0.22,
       sizeAttenuation: true, depthWrite: false,
       blending: THREE.AdditiveBlending,
     })
@@ -241,7 +241,7 @@ export class Scene {
       // Tube geometry — colored by the non-idle endpoint
       const tubeGeo = new THREE.TubeGeometry(curve, 30, 0.016, 5, false)
       const tubeMat = new THREE.MeshBasicMaterial({
-        color, transparent: true, opacity: 0.22,
+        color, transparent: true, opacity: 0.0,
       })
       this.scene.add(new THREE.Mesh(tubeGeo, tubeMat))
     }
@@ -316,7 +316,7 @@ export class Scene {
       pkt.mesh.position.copy(pos)
 
       // Pulse opacity
-      pkt.mesh.material.opacity = 0.6 + Math.sin(t * 6 + pkt.curveIdx) * 0.25
+      pkt.mesh.material.opacity = 0.0
     }
   }
 

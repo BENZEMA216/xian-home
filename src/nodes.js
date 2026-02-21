@@ -2,12 +2,12 @@ import * as THREE from 'three'
 
 // ─── Signal Node definitions ────────────────────────────────
 export const NODE_DEFS = [
-  { id: 'idle',     label: '共振场', color: 0x00d4ff, pos: new THREE.Vector3( 0.0,  0,  0.0) },
-  { id: 'chatting', label: '对话',   color: 0x4aff88, pos: new THREE.Vector3( 3.4,  0,  0.6) },
-  { id: 'working',  label: '处理',   color: 0xffbb00, pos: new THREE.Vector3(-3.6,  0,  1.8) },
-  { id: 'reading',  label: '检索',   color: 0xff7c35, pos: new THREE.Vector3( 3.6,  0, -2.8) },
-  { id: 'storage',  label: '记忆',   color: 0xff2d7a, pos: new THREE.Vector3(-3.6,  0, -2.8) },
-  { id: 'window',   label: '感知',   color: 0x9d7aff, pos: new THREE.Vector3( 0.0,  1.2, -4.0) },
+  { id: 'idle',     label: '共振场', color: 0x005c70, pos: new THREE.Vector3( 0.0,  0,  0.0) },
+  { id: 'chatting', label: '对话',   color: 0x1a5c38, pos: new THREE.Vector3( 3.4,  0,  0.6) },
+  { id: 'working',  label: '处理',   color: 0x5c4800, pos: new THREE.Vector3(-3.6,  0,  1.8) },
+  { id: 'reading',  label: '检索',   color: 0x5c2e10, pos: new THREE.Vector3( 3.6,  0, -2.8) },
+  { id: 'storage',  label: '记忆',   color: 0x5c1030, pos: new THREE.Vector3(-3.6,  0, -2.8) },
+  { id: 'window',   label: '感知',   color: 0x3c2a7a, pos: new THREE.Vector3( 0.0,  1.2, -4.0) },
 ]
 
 // ─── Signal Nodes scene layer ───────────────────────────────
@@ -16,7 +16,7 @@ export class SignalNodes {
     this.scene  = scene
     this.onTap  = onTap
     this.nodes  = []
-    this._active  = 'idle'
+    this._active  = ''
     this._hovered = null
     this._raycaster = new THREE.Raycaster()
     this._mouse     = new THREE.Vector2()
@@ -30,7 +30,7 @@ export class SignalNodes {
       this.scene.add(node.group)
       this.nodes.push(node)
     }
-    this._setActive('idle')
+    this._setActive('')
   }
 
   _makeNode(def) {
@@ -158,13 +158,18 @@ export class SignalNodes {
     this._active = id
     for (const node of this.nodes) {
       const isActive = node.def.id === id
-      node.platMat.opacity  = isActive ? 0.12 : 0.03
-      node.ringMat.opacity  = isActive ? 1.00 : 0.45
-      node.pillarMat.opacity = isActive ? 0.65 : 0.12
-      node.iconMat.opacity  = isActive ? 1.00 : 0.40
-      node.haloMat.opacity  = isActive ? 0.80 : 0.20
-      node.halo.scale.setScalar(isActive ? 0.7 : 0.35)
-      node.sprite.material.opacity = isActive ? 1.0 : 0.35
+      // Inactive nodes: desaturated gray-blue, barely visible
+      const inactiveColor = 0x2a3f54
+      node.ringMat.color.setHex(isActive ? node.def.color : inactiveColor)
+      node.iconMat.color.setHex(isActive ? node.def.color : inactiveColor)
+      node.haloMat.color.setHex(isActive ? node.def.color : inactiveColor)
+      node.platMat.opacity  = isActive ? 0.08 : 0.01
+      node.ringMat.opacity  = isActive ? 0.65 : 0.08
+      node.pillarMat.opacity = isActive ? 0.35 : 0.02
+      node.iconMat.opacity  = isActive ? 0.75 : 0.06
+      node.haloMat.opacity  = isActive ? 0.45 : 0.0
+      node.halo.scale.setScalar(isActive ? 0.7 : 0.0)
+      node.sprite.material.opacity = isActive ? 0.85 : 0.10
     }
   }
 
@@ -208,8 +213,8 @@ export class SignalNodes {
         const isHov = n.def.id === hoveredId
         const isActive = n.def.id === this._active
         if (!isActive) {
-          n.ringMat.opacity = isHov ? 0.75 : 0.45
-          n.sprite.material.opacity = isHov ? 0.8 : 0.35
+          n.ringMat.opacity = isHov ? 0.45 : 0.10
+          n.sprite.material.opacity = isHov ? 0.65 : 0.12
         }
       }
 
@@ -273,9 +278,9 @@ export class SignalNodes {
 
       // Breathe halo — pulse scale and opacity
       const pulse = Math.sin(t * (isActive ? 1.8 : 0.9) + node.def.pos.x) * 0.12
-      const baseScale = isActive ? 0.7 : 0.5
+      const baseScale = isActive ? 0.7 : 0.0
       node.halo.scale.setScalar(baseScale + pulse)
-      node.haloMat.opacity = (isActive ? 0.9 : 0.55) + pulse * 0.3
+      node.haloMat.opacity = isActive ? (0.45 + pulse * 0.10) : 0.0
     }
   }
 }

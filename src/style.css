@@ -476,3 +476,17 @@ html, body {
 
 /* Transition for thought bubble */
 #thoughtBubble { display: block; }
+
+/* ── Vignette overlay — focus attention on center ── */
+#vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    ellipse at 50% 55%,
+    transparent 40%,
+    rgba(3, 2, 14, 0.45) 75%,
+    rgba(3, 2, 14, 0.72) 100%
+  );
+}
