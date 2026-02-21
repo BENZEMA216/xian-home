@@ -3,7 +3,7 @@ import * as THREE from 'three'
 // ─── Signal Node definitions ────────────────────────────────
 export const NODE_DEFS = [
   { id: 'idle',     label: '共振场', color: 0x00d4ff, pos: new THREE.Vector3( 0.0,  0, 0.0) },
-  { id: 'chatting', label: '对话',   color: 0x4aff88, pos: new THREE.Vector3( 2.8,  0, 1.6) },
+  { id: 'chatting', label: '对话',   color: 0x4aff88, pos: new THREE.Vector3( 2.4,  0, 1.2) },
   { id: 'working',  label: '处理',   color: 0xffbb00, pos: new THREE.Vector3(-2.8,  0, 1.6) },
   { id: 'reading',  label: '检索',   color: 0xff7c35, pos: new THREE.Vector3( 2.8,  0,-2.2) },
   { id: 'storage',  label: '记忆',   color: 0xff2d7a, pos: new THREE.Vector3(-2.8,  0,-2.2) },
@@ -102,8 +102,16 @@ export class SignalNodes {
     const r = (color >> 16) & 0xff
     const g = (color >>  8) & 0xff
     const b =  color        & 0xff
-    ctx.fillStyle = `rgba(${r},${g},${b},0.85)`
+    // Text glow
+    ctx.shadowColor = `rgba(${r},${g},${b},0.9)`
+    ctx.shadowBlur = 12
+    ctx.fillStyle = `rgba(${r},${g},${b},0.95)`
     ctx.fillText(text, 128, 60)
+    // Second pass for stronger glow core
+    ctx.shadowBlur = 4
+    ctx.fillStyle = `rgba(255,255,255,0.6)`
+    ctx.fillText(text, 128, 60)
+    ctx.shadowBlur = 0
 
     const tex = new THREE.CanvasTexture(canvas)
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true })

@@ -9,9 +9,9 @@ export class Scene {
     this.canvas = canvas
 
     // Three.js core
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    this.renderer.setClearColor(0x0a0a0f, 1)
+    this.renderer.setClearColor(0x000000, 0)  // transparent — body gradient shows through
     this.renderer.setSize(window.innerWidth, window.innerHeight)
 
     this.scene  = new THREE.Scene()
@@ -20,7 +20,7 @@ export class Scene {
     this.camera.lookAt(0, 0.5, 0)
 
     // Fog for depth
-    this.scene.fog = new THREE.FogExp2(0x0a0a0f, 0.038)
+    this.scene.fog = new THREE.FogExp2(0x060410, 0.038)
 
     // Ambient light
     const ambient = new THREE.AmbientLight(0x101828, 1.5)
@@ -185,11 +185,15 @@ export class Scene {
   // ── Network connection lines + signal packets ────────────
 
   _buildNetworkLines() {
+    // Sparse center connections + peripheral ring connections
     const pairs = [
-      ['idle', 'chatting'], ['idle', 'working'],
-      ['idle', 'reading'],  ['idle', 'storage'],
-      ['idle', 'window'],   ['chatting', 'working'],
-      ['reading', 'storage'],
+      ['idle', 'chatting'],   // center → dialog
+      ['idle', 'working'],    // center → processing
+      ['idle', 'window'],     // center → perception (far, elevated)
+      ['chatting', 'reading'],  // dialog ↔ retrieval (right arc)
+      ['working', 'storage'],   // processing ↔ memory (left arc)
+      ['chatting', 'working'],  // dialog ↔ processing (front arc)
+      ['reading', 'storage'],   // retrieval ↔ memory (back arc)
     ]
 
     this._curves = []  // store for signal packet animation
@@ -200,8 +204,10 @@ export class Scene {
       if (!nodeA || !nodeB) continue
 
       const pa = nodeA.pos, pb = nodeB.pos
+      // Arc height proportional to distance — longer connections arc higher
+      const dist = pa.distanceTo(pb)
       const mid = pa.clone().add(pb).multiplyScalar(0.5)
-      mid.y += 0.9
+      mid.y += 0.5 + dist * 0.22
 
       const curve = new THREE.CatmullRomCurve3([
         pa.clone().add(new THREE.Vector3(0, 0.1, 0)),
@@ -225,22 +231,52 @@ export class Scene {
   }
 
   _buildSignalPackets() {
-    // 12 signal packets traveling along connections
-    const packetGeo = new THREE.SphereGeometry(0.065, 8, 8)
+    // Build glow sprite texture (reused)
+    const sc = document.createElement('canvas')
+    sc.width = sc.height = 64
+    const sctx = sc.getContext('2d')
+    const sg = sctx.createRadialGradient(32, 32, 0, 32, 32, 32)
+    sg.addColorStop(0,    'rgba(255,255,255,1)')
+    sg.addColorStop(0.25, 'rgba(255,255,255,0.8)')
+    sg.addColorStop(0.6,  'rgba(255,255,255,0.2)')
+    sg.addColorStop(1,    'rgba(255,255,255,0)')
+    sctx.fillStyle = sg
+    sctx.fillRect(0, 0, 64, 64)
+    const glowTex = new THREE.CanvasTexture(sc)
+
+    // 14 signal packets traveling along connections
+    const packetGeo = new THREE.SphereGeometry(0.055, 8, 8)
     this._packets = []
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 14; i++) {
       const curveIdx = i % this._curves.length
       const { color } = this._curves[curveIdx]
+
+      // Core sphere
       const mat = new THREE.MeshBasicMaterial({ color, transparent: true })
       const mesh = new THREE.Mesh(packetGeo, mat)
-      this.scene.add(mesh)
 
+      // Glow halo sprite (color-tinted)
+      const r = (color >> 16) & 0xff
+      const g = (color >>  8) & 0xff
+      const b =  color        & 0xff
+      const glowMat = new THREE.SpriteMaterial({
+        map: glowTex,
+        color,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        opacity: 0.7,
+      })
+      const glow = new THREE.Sprite(glowMat)
+      glow.scale.setScalar(0.7)
+      mesh.add(glow)
+
+      this.scene.add(mesh)
       this._packets.push({
         mesh,
         curveIdx,
-        // Stagger start times so they don't all move in sync
-        progress: (i / 12),
+        progress: i / 14,
         speed: 0.28 + Math.random() * 0.18,
       })
     }

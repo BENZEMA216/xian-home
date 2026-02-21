@@ -6,7 +6,7 @@
   --purple:  #b14eff;
   --amber:   #ffbb00;
   --green:   #4aff88;
-  --bg:      #0a0a0f;
+  --bg:      radial-gradient(ellipse at 50% 40%, #0e0a1c 0%, #08080f 55%, #030305 100%);
   --surface: rgba(14, 14, 22, 0.82);
   --border:  rgba(0, 212, 255, 0.12);
   --text:    #e8eaf0;
@@ -97,13 +97,13 @@ html, body {
 #thoughtBubble {
   position: fixed;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, calc(-50% - 30px));
+  top: 14%;
+  transform: translateX(-50%);
   z-index: 5;
   pointer-events: none;
   transition: opacity 0.4s, transform 0.4s;
 }
-#thoughtBubble.hidden { opacity: 0; transform: translate(-50%, calc(-50% - 20px)); }
+#thoughtBubble.hidden { opacity: 0; transform: translateX(-50%) translateY(-12px); }
 
 .thought-inner {
   background: var(--surface);
