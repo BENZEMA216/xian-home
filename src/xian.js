@@ -143,26 +143,26 @@ export class XianNode {
   }
 
   _buildStatusRing() {
-    const mat = new THREE.MeshBasicMaterial({ color: C.cyan, transparent: true, opacity: 0.40 })
-    this.statusRing = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.015, 8, 64), mat)
+    // Keep ring + beam subtle — they're spatial anchors, not focal points
+    const mat = new THREE.MeshBasicMaterial({ color: C.cyan, transparent: true, opacity: 0.18 })
+    this.statusRing = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.010, 8, 64), mat)
     this.statusRing.rotation.x = Math.PI / 2
     this.statusRing.position.y = -1.1
     this.group.add(this.statusRing)
 
-    // Grounding beam: thin cylinder always visible regardless of camera angle
+    // Beam: very thin, very subtle
     this._beamMat = new THREE.MeshBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.22,
+      color: C.cyan, transparent: true, opacity: 0.10,
     })
-    // Cylinder from y=0 to y=-1.1 → height=1.1, centered at y=-0.55
-    const beamGeo = new THREE.CylinderGeometry(0.006, 0.012, 1.1, 6, 1)
+    const beamGeo = new THREE.CylinderGeometry(0.004, 0.008, 1.1, 5, 1)
     const beamMesh = new THREE.Mesh(beamGeo, this._beamMat)
     beamMesh.position.y = -0.55
     this.group.add(beamMesh)
 
-    // Ground glow pool: large soft sprite under statusRing
+    // Ground glow pool: very soft
     this.groundGlow = this._makeGlowSprite(C.cyan)
-    this.groundGlow.scale.setScalar(3.2)
-    this.groundGlow.material.opacity = 0.07
+    this.groundGlow.scale.setScalar(2.2)
+    this.groundGlow.material.opacity = 0.04
     this.groundGlow.position.y = -1.1
     this.group.add(this.groundGlow)
   }
@@ -267,17 +267,17 @@ export class XianNode {
     const wavePeak = Math.abs(Math.sin(t * 1.0))  // 0..1 following wave
     this._tubeMat.opacity = 0.88 + wavePeak * 0.10
 
-    // Ring slow spin + pulse
+    // Ring: very subtle spin — barely there, just hints at presence
     if (this.statusRing) {
-      this.statusRing.rotation.z = t * 0.4
-      this.statusRing.material.opacity = 0.30 + Math.sin(t * 1.8) * 0.12
+      this.statusRing.rotation.z = t * 0.3
+      this.statusRing.material.opacity = 0.10 + Math.sin(t * 1.4) * 0.06
     }
 
-    // Beam + ground glow breathe in sync with wave
-    if (this._beamMat) this._beamMat.opacity = 0.14 + Math.sin(t * 1.0) * 0.08
+    // Beam + ground glow: barely perceptible
+    if (this._beamMat) this._beamMat.opacity = 0.07 + Math.sin(t * 1.0) * 0.04
     if (this.groundGlow) {
-      this.groundGlow.material.opacity = 0.05 + Math.sin(t * 1.0) * 0.03
-      const gs = 3.0 + Math.sin(t * 0.7) * 0.4
+      this.groundGlow.material.opacity = 0.03 + Math.sin(t * 0.8) * 0.015
+      const gs = 2.0 + Math.sin(t * 0.6) * 0.25
       this.groundGlow.scale.setScalar(gs)
     }
   }

@@ -292,3 +292,25 @@ function loop(now) {
 }
 
 requestAnimationFrame(loop)
+
+// Suggestion chips
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    ambientText.value = chip.dataset.msg
+    ambientText.focus()
+  })
+})
+
+// Dynamic greeting based on time
+const greetingEl = document.getElementById('xianGreeting')
+if (greetingEl) {
+  const h = new Date().getHours()
+  const greetings = {
+    night:   '深夜在线 · 等你开口',
+    morning: '早上好 · 等你开口',
+    day:     '在线 · 等你开口',
+    evening: '晚上好 · 等你开口',
+  }
+  const phase = h < 5 ? 'night' : h < 11 ? 'morning' : h < 18 ? 'day' : 'evening'
+  greetingEl.textContent = greetings[phase]
+}

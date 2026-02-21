@@ -81,9 +81,7 @@ html, body {
 }
 
 .status-text {
-  font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 0.8px;
+  display: none;   /* dot-only status; text feels like dev UI */
 }
 
 /* ─── Icon Button ────────────────────────────────── */
@@ -598,4 +596,98 @@ html, body {
   height: 80px;
   background: linear-gradient(to top, rgba(0,212,255,0.20), transparent);
   pointer-events: none;
+}
+
+/* ── Energy Bridge (scene ↔ input bar) ─────────────────── */
+#energyBridge {
+  position: fixed;
+  bottom: 60px;   /* just above the input bar */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 160px;
+  background: radial-gradient(
+    ellipse at center bottom,
+    rgba(0, 212, 255, 0.08) 0%,
+    rgba(0, 212, 255, 0.03) 40%,
+    transparent 75%
+  );
+  pointer-events: none;
+  z-index: 4;
+  animation: bridgePulse 3s ease-in-out infinite;
+}
+@keyframes bridgePulse {
+  0%, 100% { opacity: 0.6; transform: translateX(-50%) scaleY(1.0); }
+  50%       { opacity: 1.0; transform: translateX(-50%) scaleY(1.15); }
+}
+
+/* ── Suggestion chips ──────────────────────────────────── */
+#suggChips {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 540px;
+  z-index: 20;
+  pointer-events: auto;
+  animation: fadeInUp 0.8s ease both 0.4s;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.chip {
+  background: rgba(6, 4, 20, 0.55);
+  border: 1px solid rgba(0, 212, 255, 0.20);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: rgba(0, 212, 255, 0.60);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.chip:hover {
+  border-color: rgba(0, 212, 255, 0.55);
+  color: rgba(0, 212, 255, 0.95);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.12);
+}
+
+/* ── Ambient greeting ─────────────────────────────────── */
+#xianGreeting {
+  position: fixed;
+  bottom: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: rgba(0, 212, 255, 0.70);   /* brighter — doing too much work to be ghostly */
+  text-transform: uppercase;
+  font-weight: 300;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  animation: greetingBreath 3.5s ease-in-out infinite;
+  margin: 0;
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.30);
+}
+@keyframes greetingBreath {
+  0%, 100% { opacity: 0.65; letter-spacing: 3px;  }
+  50%       { opacity: 1.0;  letter-spacing: 3.5px; }
+}
+
+/* Input bar breathes with wave rhythm (~2s) */
+#ambientInput {
+  animation: inputBreathe 2.1s ease-in-out infinite;
+}
+@keyframes inputBreathe {
+  0%, 100% { box-shadow: 0 0 20px rgba(0,212,255,0.05), 0 4px 24px rgba(0,0,0,0.4); }
+  50%       { box-shadow: 0 0 32px rgba(0,212,255,0.12), 0 4px 24px rgba(0,0,0,0.5); }
 }
