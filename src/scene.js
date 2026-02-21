@@ -132,7 +132,7 @@ export class Scene {
 
   _updateCamera(t) {
     if (this._autoOrbit) {
-      this._orbitGoalH = 1.5708 + Math.sin(t * 0.05) * 0.20
+      this._orbitGoalH = 1.5708 + Math.sin(t * 0.14) * 0.28
       this._orbitGoalV = 0.45 + Math.sin(t * 0.04) * 0.03
     }
     // Smooth lerp

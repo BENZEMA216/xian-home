@@ -58,7 +58,7 @@ export class XianNode {
     for (let k = 0; k < MARKERS; k++) {
       const norm = k / (MARKERS - 1)
       const envelope = Math.sin(norm * Math.PI)
-      const r = 0.038 + envelope * 0.050   // max 0.088 at center
+      const r = 0.055 + envelope * 0.055   // endpoints 0.055, center 0.11 — always visible
       const mat = new THREE.MeshBasicMaterial({
         color: C.white, transparent: true, opacity: 0.95,
       })
@@ -168,11 +168,14 @@ export class XianNode {
   }
 
   _updateWave(t) {
+    // [n, weight, phaseOffset]
+    // Quadrature trick: when harmonic-1 is near zero (sin≈0), harmonic-2 at π/2 offset is near peak
+    // → string is NEVER fully flat
     const configs = {
-      idle:     { harmonics: [[1, 1.00]],           speed: 1.0, amp: 0.55 },
-      chatting: { harmonics: [[2, 1.00]],           speed: 2.4, amp: 0.44 },
-      working:  { harmonics: [[3, 1.00]],           speed: 3.2, amp: 0.34 },
-      thinking: { harmonics: [[1, 1.00],[3, 0.35]], speed: 1.3, amp: 0.50 },
+      idle:     { harmonics: [[1, 1.00, 0], [2, 0.40, 1.5708]], speed: 1.0, amp: 0.46 },
+      chatting: { harmonics: [[2, 1.00, 0], [1, 0.25, 1.5708]], speed: 2.2, amp: 0.42 },
+      working:  { harmonics: [[3, 1.00, 0], [2, 0.30, 1.5708]], speed: 3.0, amp: 0.32 },
+      thinking: { harmonics: [[1, 1.00, 0], [3, 0.45, 1.5708]], speed: 1.2, amp: 0.48 },
     }
     const { harmonics, speed, amp } = configs[this.state]
     const N = this._waveN, L = this._waveL
@@ -181,10 +184,10 @@ export class XianNode {
       const norm = i / (N - 1)
       const envelope = Math.sin(norm * Math.PI)
       let yD = 0, zD = 0
-      for (const [n, w] of harmonics) {
-        const phase = t * speed * (n === 1 ? 1.0 : 1.6)
+      for (const [n, w, phOff] of harmonics) {
+        const phase = t * speed + phOff
         yD += w * Math.sin(n * Math.PI * norm) * Math.sin(phase) * amp * envelope
-        zD += w * Math.sin(n * Math.PI * norm) * Math.sin(phase + 1.57) * amp * 0.35 * envelope
+        zD += w * Math.sin(n * Math.PI * norm) * Math.cos(phase) * amp * 0.32 * envelope
       }
       this._wavePoints[i].set(norm * L - L / 2, yD, zD)
     }
