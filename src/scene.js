@@ -35,7 +35,7 @@ export class Scene {
     this.scene.add(this.grid.group)
 
     this.xian  = new XianNode()
-    this.xian.group.position.set(0, 0.8, 0)
+    this.xian.group.position.set(0, 1.5, 0)
     this.xian.group.scale.setScalar(1.6)
     this.scene.add(this.xian.group)
 
@@ -56,7 +56,7 @@ export class Scene {
     this.composer.addPass(this.bloomPass)
 
     // Camera orbit state
-    this._orbitTarget   = new THREE.Vector3(0, 1.0, 0)
+    this._orbitTarget   = new THREE.Vector3(0, 1.3, 0)
     this._orbitAngleH   = 0.4    // horizontal angle (radians)
     this._orbitAngleV   = 0.28   // ~16° elevation — cinematic low angle
     this._orbitRadius   = 8.5
@@ -239,9 +239,9 @@ export class Scene {
       this._curves.push({ curve, color })
 
       // Tube geometry — colored by the non-idle endpoint
-      const tubeGeo = new THREE.TubeGeometry(curve, 30, 0.020, 5, false)
+      const tubeGeo = new THREE.TubeGeometry(curve, 30, 0.016, 5, false)
       const tubeMat = new THREE.MeshBasicMaterial({
-        color, transparent: true, opacity: 0.40,
+        color, transparent: true, opacity: 0.22,
       })
       this.scene.add(new THREE.Mesh(tubeGeo, tubeMat))
     }

@@ -29,15 +29,15 @@ export class XianNode {
   // ── Construction ──────────────────────────────────────────
 
   _buildString() {
-    const N = 42
-    const L = 1.9   // total string length; beads from -L/2 to +L/2
+    const N = 60
+    const L = 2.6   // horizontal span along X axis
 
     for (let i = 0; i < N; i++) {
       const t = i / (N - 1)
-      const baseY = t * L - L / 2
-      const envelope = Math.sin(t * Math.PI)           // tapers at endpoints
-      const r = 0.013 + envelope * 0.024
-      const alpha = 0.32 + envelope * 0.68
+      const baseX = t * L - L / 2   // ← string runs LEFT–RIGHT (X axis)
+      const envelope = Math.sin(t * Math.PI)
+      const r = 0.045 + envelope * 0.085   // large enough to form a visible rope
+      const alpha = 0.55 + envelope * 0.45   // all beads bright; center near opaque
 
       // Color gradient: cyan at center, purple at endpoints
       const cR = Math.round(0x00 + (0xb1 - 0x00) * (1 - envelope))
@@ -46,23 +46,21 @@ export class XianNode {
       const beadColor = (cR << 16) | (cG << 8) | cB
 
       const mat = new THREE.MeshBasicMaterial({
-        color: beadColor,
-        transparent: true,
-        opacity: alpha,
+        color: beadColor, transparent: true, opacity: alpha,
       })
       const mesh = new THREE.Mesh(this._beadGeo, mat)
       mesh.scale.setScalar(r)
-      mesh.position.y = baseY
+      mesh.position.x = baseX   // rest position on X axis
       this.group.add(mesh)
-      this.beads.push({ mesh, t, envelope, baseY })
+      this.beads.push({ mesh, t, envelope, baseX })  // store baseX
     }
 
-    // Bright anchor endpoints
+    // Bright anchor endpoints — at left & right tips
     const anchorMat = new THREE.MeshBasicMaterial({ color: C.cyan })
-    for (const y of [-L / 2, L / 2]) {
+    for (const x of [-L / 2, L / 2]) {
       const m = new THREE.Mesh(this._beadGeo, anchorMat)
-      m.scale.setScalar(0.045)
-      m.position.y = y
+      m.scale.setScalar(0.055)
+      m.position.x = x
       this.group.add(m)
     }
 
@@ -71,7 +69,7 @@ export class XianNode {
     const spineGeo = new THREE.BufferGeometry()
     spineGeo.setAttribute('position', new THREE.BufferAttribute(spinePositions, 3))
     const spineMat = new THREE.LineBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.65,
+      color: C.cyan, transparent: true, opacity: 0.90,
     })
     this.spineLine = new THREE.Line(spineGeo, spineMat)
     this._spinePositions = spinePositions
@@ -199,27 +197,27 @@ export class XianNode {
   /** Standing wave: displacement(y,t) = Σ Aₙ·sin(n·π·norm)·sin(ωₙ·t) */
   _updateWave(t) {
     const configs = {
-      idle:     { harmonics: [[1, 1.00]],           speed: 1.0, amp: 0.48 },
-      chatting: { harmonics: [[2, 1.00]],           speed: 2.4, amp: 0.38 },
-      working:  { harmonics: [[3, 1.00]],           speed: 3.2, amp: 0.28 },
-      thinking: { harmonics: [[1, 1.00],[3, 0.35]], speed: 1.3, amp: 0.42 },
+      idle:     { harmonics: [[1, 1.00]],           speed: 1.0, amp: 0.55 },
+      chatting: { harmonics: [[2, 1.00]],           speed: 2.4, amp: 0.44 },
+      working:  { harmonics: [[3, 1.00]],           speed: 3.2, amp: 0.34 },
+      thinking: { harmonics: [[1, 1.00],[3, 0.35]], speed: 1.3, amp: 0.50 },
     }
     const { harmonics, speed, amp } = configs[this.state]
 
     let i = 0
-    for (const { mesh, t: norm, envelope, baseY } of this.beads) {
-      let xD = 0, zD = 0
+    for (const { mesh, t: norm, envelope, baseX } of this.beads) {
+      // Horizontal string: bead rests on X axis, wave displaces in Y (vertical) and Z (depth)
+      let yD = 0, zD = 0
       for (const [n, w] of harmonics) {
-        const spatial = Math.sin(n * Math.PI * norm)
-        const px = t * speed * (n === 1 ? 1.0 : 1.6)
-        const pz = px + Math.PI / 2
-        xD += w * spatial * Math.sin(px) * amp * envelope
-        zD += w * spatial * Math.sin(pz) * amp * 0.30 * envelope
+        const spatial = Math.sin(n * Math.PI * norm)   // standing wave mode
+        const phase = t * speed * (n === 1 ? 1.0 : 1.6)
+        yD += w * spatial * Math.sin(phase)        * amp * envelope
+        zD += w * spatial * Math.sin(phase + 1.57) * amp * 0.25 * envelope
       }
-      mesh.position.set(xD, baseY, zD)
+      mesh.position.set(baseX, yD, zD)
       // Update spine
-      this._spinePositions[i * 3 + 0] = xD
-      this._spinePositions[i * 3 + 1] = baseY
+      this._spinePositions[i * 3 + 0] = baseX
+      this._spinePositions[i * 3 + 1] = yD
       this._spinePositions[i * 3 + 2] = zD
       i++
     }
