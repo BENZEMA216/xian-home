@@ -135,7 +135,7 @@ export class SignalNodes {
     const tex = new THREE.CanvasTexture(canvas)
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true })
     const sprite = new THREE.Sprite(mat)
-    sprite.scale.set(0.9, 0.45, 1)
+    sprite.scale.set(1.05, 0.52, 1)
     return sprite
   }
 

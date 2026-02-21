@@ -32,12 +32,12 @@ const activityToNode = {
 
 // ─── Thought messages per node ────────────────────────────
 const nodeThoughts = {
-  idle:     { text: '待机中...', icon: '◈' },
-  chatting: { text: '在听', icon: '◎' },
-  working:  { text: '处理中...', icon: '⊛' },
-  reading:  { text: '检索...', icon: '⊕' },
-  storage:  { text: '回溯记忆', icon: '⊗' },
-  window:   { text: '感知外界', icon: '⊙' },
+  idle:     { text: '共振场稳定', icon: '◈' },
+  chatting: { text: '信号接入', icon: '◎' },
+  working:  { text: '运算展开中', icon: '⊛' },
+  reading:  { text: '检索语义空间', icon: '⊕' },
+  storage:  { text: '记忆回溯', icon: '⊗' },
+  window:   { text: '感知外界涌入', icon: '⊙' },
 }
 
 // ─── Init scene ───────────────────────────────────────────

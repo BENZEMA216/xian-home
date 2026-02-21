@@ -142,9 +142,9 @@ export class XianNode {
 
     // Ring 3 — perpendicular, white accent (smaller)
     const r3m = new THREE.MeshBasicMaterial({
-      color: 0xffffff, transparent: true, opacity: 0.22,
+      color: 0xaaddff, transparent: true, opacity: 0.40,
     })
-    this.ring3 = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.012, 8, 80), r3m)
+    this.ring3 = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.015, 8, 80), r3m)
     this.ring3.rotation.set(Math.PI / 2, Math.PI / 4, 0)
     this.group.add(this.ring3)
   }
@@ -258,32 +258,43 @@ export class XianNode {
 
   teleportTo(targetPos, onComplete) {
     const startScale = this.group.scale.x
-    const duration   = 420   // ms
+    const duration   = 520   // ms — slightly longer for drama
     const start      = performance.now()
 
     const animate = (now) => {
       const elapsed = now - start
       const pct = Math.min(elapsed / duration, 1)
 
-      if (pct < 0.45) {
-        // Phase 1: contract (0 → 0.45)
-        const ease = 1 - Math.pow(1 - pct / 0.45, 2)
-        const s = startScale * (1 - ease)
+      if (pct < 0.40) {
+        // Phase 1: compress to a bright point
+        const t = pct / 0.40
+        const ease = 1 - Math.pow(1 - t, 2)
+        const s = startScale * (1 - ease * 0.98)
         this.group.scale.setScalar(Math.max(s, 0.01))
-      } else if (pct < 0.50) {
-        // Phase 2: teleport at mid-point
+        // Glow pulses bright during collapse
+        if (this.glowSprite) {
+          this.glowSprite.material.opacity = 0.85 + ease * 0.5
+        }
+      } else if (pct < 0.46) {
+        // Phase 2: snap to destination
         this.group.scale.setScalar(0.01)
         this.group.position.set(targetPos.x, targetPos.y, targetPos.z)
+        if (this.glowSprite) this.glowSprite.material.opacity = 1.2
       } else {
-        // Phase 3: expand (0.50 → 1.0)
-        const ease = Math.pow((pct - 0.5) / 0.5, 0.4)
-        this.group.scale.setScalar(ease)
+        // Phase 3: spring expand with bounce overshoot
+        const t = (pct - 0.46) / 0.54
+        // Spring: overshoot then settle
+        const spring = 1 + Math.exp(-t * 8) * Math.cos(t * 14) * 0.35
+        this.group.scale.setScalar(Math.max(0, spring) * startScale)
+        if (this.glowSprite) {
+          this.glowSprite.material.opacity = 0.82 + Math.sin(t * Math.PI) * 0.18
+        }
       }
 
       if (pct < 1) {
         requestAnimationFrame(animate)
       } else {
-        this.group.scale.setScalar(1)
+        this.group.scale.setScalar(startScale)
         onComplete?.()
       }
     }
