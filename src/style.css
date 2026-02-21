@@ -130,6 +130,33 @@ html, body {
 .thought-icon { font-size: 11px; color: var(--cyan); opacity: 0.8; }
 .thought-text { font-size: 11px; color: rgba(220,240,255,0.8); letter-spacing: 1.5px; text-transform: uppercase; }
 
+/* ─── Node Tooltip ───────────────────────────────── */
+.node-tooltip {
+  position: fixed;
+  z-index: 8;
+  pointer-events: none;
+  transform: translate(-50%, -130%);
+  transition: opacity 0.18s;
+  white-space: nowrap;
+}
+.node-tooltip.hidden { opacity: 0; }
+.node-tooltip:not(.hidden) { opacity: 1; }
+.tooltip-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(0,212,255,0.6);
+}
+.tooltip-desc {
+  font-size: 10px;
+  color: rgba(180,210,240,0.55);
+  letter-spacing: 0.5px;
+  text-align: center;
+  margin-top: 2px;
+}
+
 /* ─── Chat FAB ───────────────────────────────────── */
 .chat-fab {
   position: fixed;

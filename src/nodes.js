@@ -198,7 +198,47 @@ export class SignalNodes {
           n.sprite.material.opacity = isHov ? 0.8 : 0.35
         }
       }
+
+      // Update tooltip
+      this._updateTooltip(hoveredId ? node : null, camera, canvas)
+    } else if (hoveredId) {
+      // Keep updating position even if same node (camera might be moving)
+      this._updateTooltip(node, camera, canvas)
     }
+  }
+
+  _updateTooltip(node, camera, canvas) {
+    const el = document.getElementById('nodeTooltip')
+    const nameEl = document.getElementById('tooltipName')
+    const descEl = document.getElementById('tooltipDesc')
+    if (!el) return
+
+    if (!node) {
+      el.classList.add('hidden')
+      return
+    }
+
+    const descs = {
+      idle:     '共振核心',
+      chatting: '语言信号层',
+      working:  '任务处理层',
+      reading:  '语义检索层',
+      storage:  '记忆存储层',
+      window:   '外界感知层',
+    }
+
+    // Project 3D position to 2D screen
+    const pos3 = node.group.position.clone()
+    pos3.y += 0.9
+    pos3.project(camera)
+    const x = (pos3.x * 0.5 + 0.5) * window.innerWidth
+    const y = (-pos3.y * 0.5 + 0.5) * window.innerHeight
+
+    nameEl.textContent = node.def.label
+    descEl.textContent = descs[node.def.id] ?? ''
+    el.style.left = `${x}px`
+    el.style.top  = `${y}px`
+    el.classList.remove('hidden')
   }
 
   handlePointer(event, camera, canvas) {
