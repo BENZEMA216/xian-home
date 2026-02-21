@@ -36,14 +36,11 @@ export class XianNode {
       const t = i / (N - 1)
       const baseX = t * L - L / 2   // ← string runs LEFT–RIGHT (X axis)
       const envelope = Math.sin(t * Math.PI)
-      const r = 0.08 + envelope * 0.14   // large enough to form a visible rope
-      const alpha = 0.55 + envelope * 0.45   // all beads bright; center near opaque
+      const r = 0.10 + envelope * 0.18   // visible rope of white beads
+      const alpha = 0.80 + envelope * 0.20   // nearly fully opaque everywhere
 
-      // Color gradient: cyan at center, purple at endpoints
-      const cR = Math.round(0x00 + (0xb1 - 0x00) * (1 - envelope))
-      const cG = Math.round(0xd4 + (0x4e - 0xd4) * (1 - envelope))
-      const cB = 0xff
-      const beadColor = (cR << 16) | (cG << 8) | cB
+      // Pure white: stands out clearly against colored nodes
+      const beadColor = 0xffffff
 
       const mat = new THREE.MeshBasicMaterial({
         color: beadColor, transparent: true, opacity: alpha,
@@ -92,7 +89,7 @@ export class XianNode {
 
     // Glow sprite (billboard radial gradient — cheap bloom substitute)
     this.glowSprite = this._makeGlowSprite(C.cyan)
-    this.glowSprite.scale.setScalar(2.0)
+    this.glowSprite.scale.setScalar(0.4)
 
     this.group.add(this.coreInner, this.coreOuter, this.glowSprite)
   }
@@ -237,9 +234,9 @@ export class XianNode {
     this.coreInner.scale.setScalar(s)
     this.coreOuter.scale.setScalar(s * 1.1)
     // Glow sprite breathes with core — larger so it bleeds past the string
-    const gs = 1.8 + Math.sin(t * 2.1) * 0.25
+    const gs = 0.30 + Math.sin(t * 2.1) * 0.05
     this.glowSprite.scale.setScalar(gs)
-    this.glowSprite.material.opacity = 0.60 + Math.sin(t * 1.8) * 0.10
+    this.glowSprite.material.opacity = 0.10 + Math.sin(t * 1.8) * 0.04
   }
 
   _updateStatusRing(t) {
@@ -271,13 +268,13 @@ export class XianNode {
         this.group.scale.setScalar(Math.max(s, 0.01))
         // Glow pulses bright during collapse
         if (this.glowSprite) {
-          this.glowSprite.material.opacity = 0.85 + ease * 0.5
+          this.glowSprite.material.opacity = 0.25 + ease * 0.15
         }
       } else if (pct < 0.46) {
         // Phase 2: snap to destination
         this.group.scale.setScalar(0.01)
         this.group.position.set(targetPos.x, targetPos.y, targetPos.z)
-        if (this.glowSprite) this.glowSprite.material.opacity = 1.2
+        if (this.glowSprite) this.glowSprite.material.opacity = 0.35
       } else {
         // Phase 3: spring expand with bounce overshoot
         const t = (pct - 0.46) / 0.54
@@ -285,7 +282,7 @@ export class XianNode {
         const spring = 1 + Math.exp(-t * 8) * Math.cos(t * 14) * 0.35
         this.group.scale.setScalar(Math.max(0, spring) * startScale)
         if (this.glowSprite) {
-          this.glowSprite.material.opacity = 0.82 + Math.sin(t * Math.PI) * 0.18
+          this.glowSprite.material.opacity = 0.20 + Math.sin(t * Math.PI) * 0.18
         }
       }
 
