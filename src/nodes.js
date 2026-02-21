@@ -112,25 +112,39 @@ export class SignalNodes {
     canvas.height = size
     const ctx     = canvas.getContext('2d')
 
-    // Transparent background
     ctx.clearRect(0, 0, 256, size)
 
-    // Text
-    ctx.font = '600 36px -apple-system, Helvetica Neue, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
     const r = (color >> 16) & 0xff
     const g = (color >>  8) & 0xff
     const b =  color        & 0xff
-    // Text glow
+
+    // Dark pill background
+    const pw = 110, ph = 42, px = 128 - pw/2, py = 60 - ph/2, pr = 21
+    ctx.beginPath()
+    ctx.moveTo(px + pr, py)
+    ctx.lineTo(px + pw - pr, py)
+    ctx.arcTo(px + pw, py, px + pw, py + pr, pr)
+    ctx.lineTo(px + pw, py + ph - pr)
+    ctx.arcTo(px + pw, py + ph, px + pw - pr, py + ph, pr)
+    ctx.lineTo(px + pr, py + ph)
+    ctx.arcTo(px, py + ph, px, py + ph - pr, pr)
+    ctx.lineTo(px, py + pr)
+    ctx.arcTo(px, py, px + pr, py, pr)
+    ctx.closePath()
+    ctx.fillStyle = 'rgba(4,6,18,0.72)'
+    ctx.fill()
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.35)`
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    // Text
+    ctx.font = '600 32px -apple-system, Helvetica Neue, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
     ctx.shadowColor = `rgba(${r},${g},${b},0.9)`
-    ctx.shadowBlur = 12
-    ctx.fillStyle = `rgba(${r},${g},${b},0.95)`
-    ctx.fillText(text, 128, 60)
-    // Second pass for stronger glow core
-    ctx.shadowBlur = 4
-    ctx.fillStyle = `rgba(255,255,255,0.6)`
-    ctx.fillText(text, 128, 60)
+    ctx.shadowBlur = 8
+    ctx.fillStyle = `rgba(${r},${g},${b},1.0)`
+    ctx.fillText(text, 128, 62)
     ctx.shadowBlur = 0
 
     const tex = new THREE.CanvasTexture(canvas)
