@@ -212,7 +212,7 @@ export class XianNode {
         const spatial = Math.sin(n * Math.PI * norm)   // standing wave mode
         const phase = t * speed * (n === 1 ? 1.0 : 1.6)
         yD += w * spatial * Math.sin(phase)        * amp * envelope
-        zD += w * spatial * Math.sin(phase + 1.57) * amp * 0.25 * envelope
+        zD += w * spatial * Math.sin(phase + 1.57) * amp * 0.40 * envelope
       }
       mesh.position.set(baseX, yD, zD)
       // Update spine

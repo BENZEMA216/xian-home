@@ -36,7 +36,7 @@ export class Scene {
 
     this.xian  = new XianNode()
     this.xian.group.position.set(0, 1.5, 0)
-    this.xian.group.scale.setScalar(1.6)
+    this.xian.group.scale.setScalar(1.9)
     this.scene.add(this.xian.group)
 
     this.signalNodes = new SignalNodes(this.scene, onNodeTap)
