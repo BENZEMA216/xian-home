@@ -145,13 +145,15 @@ settingsBtn  .addEventListener('click', () => settingsPanel.classList.remove('hi
 settingsClose.addEventListener('click', () => settingsPanel.classList.add('hidden'))
 
 connectBtn.addEventListener('click', () => {
-  const host = hostInput.value.trim()
-  const port = parseInt(portInput.value) || 18789
+  const host  = hostInput.value.trim()
+  const port  = parseInt(portInput.value) || 18789
+  const token = document.getElementById('gatewayToken')?.value.trim() ?? ''
   if (!host) { settingsInfo('请输入 Gateway 地址'); return }
   settingsInfo('连接中...')
   localStorage.setItem('xian_host', host)
   localStorage.setItem('xian_port', String(port))
-  gateway.connect(host, port)
+  if (token) localStorage.setItem('xian_token', token)
+  gateway.connect(host, port, token)
   setTimeout(() => settingsPanel.classList.add('hidden'), 400)
 })
 
@@ -222,10 +224,12 @@ if (savedStateHost) {
 // Always start in demo mode visually; real connection upgrades it
 gateway.enterDemoMode()
 
+const savedToken = localStorage.getItem('xian_token') ?? ''
 if (savedHost) {
   hostInput.value = savedHost
   portInput.value = String(savedPort)
-  gateway.connect(savedHost, savedPort)
+  if (savedToken) document.getElementById('gatewayToken').value = savedToken
+  gateway.connect(savedHost, savedPort, savedToken)
   setTimeout(() => {
     chat.appendMessage('尝试连接 Gateway...\n\n连接失败时自动进入演示模式。', 'xian')
     chat.setThought('信号搜寻中...', '◌')

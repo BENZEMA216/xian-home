@@ -17,9 +17,10 @@ export class GatewayClient extends EventTarget {
 
   // ── Public API ─────────────────────────────────────────────
 
-  connect(host, port = 18789) {
+  connect(host, port = 18789, token = '') {
     this._demoMode = false
     this._reconnDelay = 1000
+    this._token = token
     this._doConnect(host, port)
   }
 
@@ -80,17 +81,14 @@ export class GatewayClient extends EventTarget {
   }
 
   _onOpen() {
-    // Send connect request (role: node)
-    this._send({
-      type:   'req',
-      id:     this._uid(),
-      method: 'connect',
-      params: {
-        role:         'node',
-        clientName:   '弦 Web',
-        capabilities: ['chat'],
-      },
-    })
+    // Send connect request (role: node) with optional auth token
+    const params = {
+      role:         'node',
+      clientName:   '弦 Web',
+      capabilities: ['chat'],
+    }
+    if (this._token) params.auth = { token: this._token }
+    this._send({ type: 'req', id: this._uid(), method: 'connect', params })
   }
 
   _onMessage(raw) {
