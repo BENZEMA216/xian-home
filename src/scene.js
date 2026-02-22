@@ -269,7 +269,7 @@ export class Scene {
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     const mat = new THREE.PointsMaterial({
-      map: tex, size: 0.10, transparent: true, opacity: 0.28,
+      map: tex, size: 0.07, transparent: true, opacity: 0.18,
       sizeAttenuation: true, depthWrite: false,
       blending: THREE.AdditiveBlending,
     })

@@ -79,7 +79,7 @@ export class XianNode {
       color: 0xffffff, vertexColors: true,
     })
     this.spineTube = new THREE.Mesh(
-      new THREE.TubeGeometry(initCurve, N, 0.011, 7, false),
+      new THREE.TubeGeometry(initCurve, N, 0.013, 7, false),
       this._tubeMat,
     )
     this.group.add(this.spineTube)
@@ -517,7 +517,7 @@ export class XianNode {
     }
 
     // ── Rebuild spine tube with vertex colors ─────────────────────────────
-    buildColoredTube(this.spineTube, 0.011, 7,
+    buildColoredTube(this.spineTube, 0.013, 7,
       this._spineBaseColor, this._spinePeakColor)
 
     // ── Rebuild continuous glow tube (uses same taper logic) ──────────────
