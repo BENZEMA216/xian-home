@@ -50,16 +50,16 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera))
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /*strength*/  1.65,
-      /*radius*/    0.58,
-      /*threshold*/ 0.09,
+      /*strength*/  1.55,
+      /*radius*/    0.35,
+      /*threshold*/ 0.12,
     )
     this.composer.addPass(this.bloomPass)
 
     // Camera orbit state
     this._orbitTarget   = new THREE.Vector3(0, 1.7, 0)
     this._orbitAngleH   = 1.5708    // horizontal angle (radians)
-    this._orbitAngleV   = 0.52   // ~30° elevation — shows 3D depth
+    this._orbitAngleV   = 0.46   // ~26° elevation — shows 3D depth
     this._orbitRadius   = 8.5
     this._orbitGoalH    = 1.5708
     this._orbitGoalV    = this._orbitAngleV
@@ -155,7 +155,7 @@ export class Scene {
       this.xian?.group.position.setY(1.6)
       this._orbitRadius = 8.5
       this._orbitTarget.set(0, 1.7, 0)
-      this._orbitGoalV = 0.52
+      this._orbitGoalV = 0.46
     }
 
     this.camera.updateProjectionMatrix()
@@ -171,8 +171,8 @@ export class Scene {
     if (this._autoOrbit && !isMobile) {
       // Desktop: wider azimuth drift to reveal Z-depth of 3D string
       // Figure-8-ish path: slow vertical + faster azimuth
-      this._orbitGoalH = 1.5708 + Math.sin(t * 0.11) * 0.68
-      this._orbitGoalV = 0.52 + Math.sin(t * 0.035) * 0.16
+      this._orbitGoalH = 1.5708 + Math.sin(t * 0.11) * 0.65
+      this._orbitGoalV = 0.46 + Math.sin(t * 0.035) * 0.14
     } else if (this._autoOrbit && isMobile) {
       // Mobile: lock to perpendicular — prevents wave from clipping screen edges
       this._orbitGoalH = Math.PI / 2
@@ -197,11 +197,11 @@ export class Scene {
   _buildNebula() {
     const clouds = [
       // [x, y, z,  scale,  r,   g,  b,  peakAlpha, rotation]
-      [ -7,  3, -14, 11.0,  55,  10, 140, 0.30,  0.4  ],  // deep purple, left
-      [  6,  1, -11,  9.0,   0,  80, 110, 0.22,  -0.6 ],  // teal, right
-      [  0,  6, -18, 14.0,  30,   5,  80, 0.20,   0.0 ],  // indigo, top-center
-      [ -3, -1,  -9,  6.5,   0, 100, 160, 0.16,   1.0 ],  // cyan accent, lower-left
-      [  4,  4, -16,  8.0,  70,  20, 120, 0.14,  -0.3 ],  // violet, upper-right
+      [ -7,  3, -14, 11.0,  55,  10, 140, 0.22,  0.4  ],  // deep purple, left
+      [  6,  1, -11,  9.0,   0,  80, 110, 0.16,  -0.6 ],  // teal, right
+      [  0,  6, -18, 14.0,  30,   5,  80, 0.14,   0.0 ],  // indigo, top-center
+      [ -3, -1,  -9,  6.5,   0, 100, 160, 0.12,   1.0 ],  // cyan accent, lower-left
+      [  4,  4, -16,  8.0,  70,  20, 120, 0.10,  -0.3 ],  // violet, upper-right
     ]
 
     for (const [x, y, z, scale, r, g, b, peak, rot] of clouds) {

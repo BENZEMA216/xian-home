@@ -49,16 +49,6 @@ export class XianNode {
   // ── Construction ──────────────────────────────────────────
 
   _buildString() {
-    // ── Architecture: spine tube + billboard sprite glow ───────────────────
-    //
-    // Key insight: tube geometry ALWAYS shows geometric cylinder faces.
-    // Instead, we use:
-    //   1. spine tube  r=0.011  opaque  → actual wave shape, drives bloom
-    //   2. N billboard sprites along the spine → glow halo that ALWAYS faces camera
-    //
-    // Sprites use a radial gradient texture and additive blending, so the glow
-    // is a smooth, camera-aligned circle at each point — no geometry artifacts.
-
     const N = 80
     const L = 4.0
     this._waveN = N
@@ -70,92 +60,52 @@ export class XianNode {
       this._wavePoints.map(v => v.clone())
     )
 
-    // Color gradient
-    this._spineBaseColor = new THREE.Color(0.60, 0.92, 1.0)   // cool cyan-white
-    this._spinePeakColor = new THREE.Color(1.0,  0.95, 0.75)  // warm golden-white
-
-    // ── Spine tube (opaque, thin, drives bloom) ─────────────────────────────
+    // Core: bright wire with vertex-color gradient (cool blue-white → warm white)
+    this._spineBaseColor = new THREE.Color(0.82, 0.94, 1.0)  // cool blue-white
+    this._spinePeakColor = new THREE.Color(1.0, 0.96, 0.86)  // warm white at peaks
     this._tubeMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff, vertexColors: true,
+      color: 0xffffff, transparent: true, opacity: 0.97,
+      vertexColors: true, depthWrite: false,
     })
     this.spineTube = new THREE.Mesh(
-      new THREE.TubeGeometry(initCurve, N, 0.011, 7, false),
+      new THREE.TubeGeometry(initCurve, N, 0.010, 6, false),
       this._tubeMat,
     )
     this.group.add(this.spineTube)
 
-    // ── Continuous glow tube (very thin, fills gaps between sprites) ─────────
-    // At r=0.024 (group space) → 0.046 world → ~9px wide: geometric faces
-    // are subpixel and invisible. Provides a smooth continuous halo baseline.
-    this._glowContMat = new THREE.MeshBasicMaterial({
-      color: 0x00d4ff,   // constant cyan — fills gaps between sprites
-      transparent: true, opacity: 0.28,
-      side: THREE.FrontSide, depthWrite: false,
-    })
-    this._glowContTube = new THREE.Mesh(
-      new THREE.TubeGeometry(initCurve, N, 0.024, 6, false),
-      this._glowContMat,
-    )
-    this.group.add(this._glowContTube)
-
-    // ── Glow sprite texture: white centre → cyan fade ──────────────────────
-    const sz = 128
-    const gc = document.createElement('canvas')
-    gc.width = gc.height = sz
-    const gctx = gc.getContext('2d')
-    const gg = gctx.createRadialGradient(sz/2, sz/2, 0, sz/2, sz/2, sz/2)
-    gg.addColorStop(0.00, 'rgba(255,255,255,1.00)')
-    gg.addColorStop(0.15, 'rgba(210,245,255,0.85)')
-    gg.addColorStop(0.40, 'rgba(0,212,255,0.35)')
-    gg.addColorStop(0.70, 'rgba(0,140,220,0.10)')
-    gg.addColorStop(1.00, 'rgba(0,80,180,0.00)')
-    gctx.fillStyle = gg
-    gctx.fillRect(0, 0, sz, sz)
-    const glowTex = new THREE.CanvasTexture(gc)
-
-    // ── Glow sprites: 28 billboard halos distributed along the string ────
-    this._glowSprites = []
-    const spriteMat = new THREE.SpriteMaterial({
-      map: glowTex,
-      blending: THREE.AdditiveBlending,
-      transparent: true, depthWrite: false,
-      opacity: 0.65,
-    })
-    const SPRITE_COUNT = 48
-    for (let i = 0; i < SPRITE_COUNT; i++) {
-      const sp = new THREE.Sprite(spriteMat.clone())
-      sp.scale.setScalar(0.36)  // slightly smaller per-sprite, more of them
-      this.group.add(sp)
-      this._glowSprites.push(sp)
-    }
-
-    // ── Endpoint cap sprites: soft circular "candle-flame" tips ─────────────
-    // These sit exactly at both wave endpoints and provide a round, glowing cap
-    // that visually finishes the string without a sharp geometric cutoff.
-    this._endCaps = []
-    const capMat = new THREE.SpriteMaterial({
-      map: glowTex,
-      blending: THREE.AdditiveBlending,
-      transparent: true, depthWrite: false,
-      opacity: 0.14,
-    })
-    for (let i = 0; i < 2; i++) {
-      const cap = new THREE.Sprite(capMat.clone())
-      cap.scale.setScalar(0.14)
-      this.group.add(cap)
-      this._endCaps.push(cap)
-    }
-
-    // Compatibility aliases — prevent _updateIdleAnim from crashing
+    // Glow (medium, BackSide → no z-fight)
+    // Uses vertex colors: lerps from state color → warm white at amplitude peaks
     this._glowBaseColor = new THREE.Color(C.cyan)
-    this._glowPeakColor = new THREE.Color(1.0, 0.82, 0.50)
+    this._glowPeakColor = new THREE.Color(1.0, 0.82, 0.50) // warm amber-gold at peaks
+    // DoubleSide: renders BOTH the front (top-facing) and back (bottom-facing) of
+    // the glow tube, so the string appears to glow uniformly from all directions
+    // rather than only from the BackSide "underlit" direction.
+    this._glowTubeMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.16,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      vertexColors: true,
+    })
+    this.glowTube = new THREE.Mesh(
+      new THREE.TubeGeometry(initCurve, N, 0.044, 8, false),
+      this._glowTubeMat,
+    )
+    this.group.add(this.glowTube)
+
+    // Haze (wide, very soft) — DoubleSide to avoid gray-side artifacts
     this._hazeBaseColor = new THREE.Color(C.cyan)
     this._hazePeakColor = new THREE.Color(0.55, 0.44, 0.90)
-    this._glowTubeMat   = this._tubeMat  // alias (opacity writes go here but do nothing harmful)
-    this._hazeTubeMat   = this._tubeMat  // alias
-    this.glowTube       = this.spineTube
-    this.hazeTube       = this.spineTube
-    this.midTube        = this.spineTube
+    this._hazeTubeMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.048,
+      side: THREE.FrontSide,
+      depthWrite: false,
+      vertexColors: true,
+    })
+    this.hazeTube = new THREE.Mesh(
+      new THREE.TubeGeometry(initCurve, N, 0.22, 8, false),
+      this._hazeTubeMat,
+    )
+    this.group.add(this.hazeTube)
   }
 
   _buildDynBeads() {
@@ -265,8 +215,8 @@ export class XianNode {
   _buildTrailParticles() {
     // 50 glow particles: spawn at high-amplitude segments, drift outward and fade.
     // Use additive-blended sprites for visible glow halos.
-    const geo = new THREE.SphereGeometry(0.020, 8, 8)
-    for (let i = 0; i < 50; i++) {
+    const geo = new THREE.SphereGeometry(0.030, 8, 8)
+    for (let i = 0; i < 60; i++) {
       const mat = new THREE.MeshBasicMaterial({
         color: C.cyan, transparent: true, opacity: 0,
         blending: THREE.AdditiveBlending, depthWrite: false,
@@ -441,11 +391,11 @@ export class XianNode {
 
     this._waveAmps = amps
 
-    // No ghost anchors — use wave points directly.
-    // CatmullRom computes tangents from p[0]→p[1] and p[N-2]→p[N-1].
-    // Combined with the taper (vertex scale → 0 at both ends), the tube
-    // vanishes naturally without creating a needle-tip artifact.
-    const curve = new THREE.CatmullRomCurve3(this._wavePoints)
+    // Ghost anchors dive BELOW the grid so tube ends are never visible to camera.
+    // Also smooth the tangent at endpoints to prevent kinks.
+    const ghostL = new THREE.Vector3(-this._waveL / 2 - 0.12, -1.2, 0)
+    const ghostR = new THREE.Vector3( this._waveL / 2 + 0.12, -1.2, 0)
+    const curve = new THREE.CatmullRomCurve3([ghostL, ...this._wavePoints, ghostR])
     const tubeSegs = N + 6
 
     // Helper: build tube geometry with vertex colors + radial taper near ends.
@@ -457,8 +407,8 @@ export class XianNode {
       const vpr = radSegs + 1
       for (let s = 0; s <= tubeSegs; s++) {
         const t = s / tubeSegs
-        // taper = 0 at endpoints, 1 beyond 18% from each end
-        const taper = Math.min(t / 0.18, 1.0, (1 - t) / 0.18)
+        // taper = 0 at endpoints, 1 beyond 8% from each end
+        const taper = Math.min(t / 0.08, 1.0, (1 - t) / 0.08)
         if (taper >= 1.0) continue
 
         // Compute ring centre (axis point = average of vertices)
@@ -481,28 +431,17 @@ export class XianNode {
       }
       pos.needsUpdate = true
 
-      // ── Vertex colours keyed to wave amplitude + endpoint fade ────────────
+      // ── Vertex colours keyed to wave amplitude ─────────────────────────────
       const vCount = geo.attributes.position.count
       const colors = new Float32Array(vCount * 3)
       for (let s = 0; s <= tubeSegs; s++) {
-        // Direct mapping: tube segments map 1:1 to wave array positions
-        const waveT  = s / tubeSegs
+        // Map tube segment to wave array (ghost anchors occupy ~5% each end)
+        const waveT  = Math.max(0, Math.min(1, (s / tubeSegs - 0.05) / 0.90))
         const ampIdx = Math.min(Math.round(waveT * (N - 1)), N - 1)
-        const ampNorm = Math.min(amps[ampIdx] / 0.38, 1.0)
-        // Pure amplitude-driven: dark blue near zero → bright golden-white at peak.
-        // Endpoints naturally vanish (amps[0] = 0) — no spike artifacts.
-        // Dark nodes shift to deep-cyan, making harmonic standing-wave nodes visible.
-        const darkR = 0.05, darkG = 0.18, darkB = 0.42   // deep-cyan near-black
-        let cr = darkR + (peakCol.r - darkR) * ampNorm
-        let cg = darkG + (peakCol.g - darkG) * ampNorm
-        let cb = darkB + (peakCol.b - darkB) * ampNorm
-        // Dim vertices where the tube is nearly tapered to zero (taper < 0.30).
-        // This prevents bloom from brightening the needle-tip even when amplitude is low.
-        const sFrac  = s / tubeSegs
-        const tapVal = Math.min(sFrac / 0.18, 1.0, (1 - sFrac) / 0.18)
-        // Aggressive tip darkening: fade vertex colour to near-black when taper < 0.70.
-        // At tapVal=0 (the very tip) → colour is 0. Prevents bloom from lighting up the spike.
-        if (tapVal < 0.70) { const d = tapVal / 0.70; cr *= d; cg *= d; cb *= d }
+        const ampNorm = Math.min(amps[ampIdx] / 0.28, 1.0)
+        const cr = baseCol.r + (peakCol.r - baseCol.r) * ampNorm
+        const cg = baseCol.g + (peakCol.g - baseCol.g) * ampNorm
+        const cb = baseCol.b + (peakCol.b - baseCol.b) * ampNorm
         for (let v = 0; v < vpr; v++) {
           const idx = (s * vpr + v) * 3
           colors[idx]     = cr
@@ -516,84 +455,17 @@ export class XianNode {
       tube.geometry = geo
     }
 
-    // ── Rebuild spine tube with vertex colors ─────────────────────────────
-    buildColoredTube(this.spineTube, 0.011, 7,
+    // Spine tube: cool blue-white → warm golden-white at peaks
+    buildColoredTube(this.spineTube, 0.010, 8,
       this._spineBaseColor, this._spinePeakColor)
 
-    // ── Rebuild continuous glow tube (uses same taper logic) ──────────────
-    if (this._glowContTube) {
-      const glowGeo = new THREE.TubeGeometry(curve, tubeSegs, 0.024, 6, false)
-      // Apply same radial taper
-      const gPos = glowGeo.attributes.position
-      const gVpr = 6 + 1
-      for (let s = 0; s <= tubeSegs; s++) {
-        const taper = Math.min(s / tubeSegs / 0.18, 1.0, (1 - s / tubeSegs) / 0.18)
-        if (taper >= 1) continue
-        let cx = 0, cy = 0, cz = 0
-        for (let v = 0; v < 6; v++) { cx += gPos.getX(s*gVpr+v); cy += gPos.getY(s*gVpr+v); cz += gPos.getZ(s*gVpr+v) }
-        cx /= 6; cy /= 6; cz /= 6
-        for (let v = 0; v < gVpr; v++) {
-          const vi = s * gVpr + v
-          gPos.setXYZ(vi, cx+(gPos.getX(vi)-cx)*taper, cy+(gPos.getY(vi)-cy)*taper, cz+(gPos.getZ(vi)-cz)*taper)
-        }
-      }
-      gPos.needsUpdate = true
-      this._glowContTube.geometry.dispose()
-      this._glowContTube.geometry = glowGeo
-    }
+    // Glow tube: state color → warm amber-gold at peaks
+    buildColoredTube(this.glowTube, 0.044, 8,
+      this._glowBaseColor, this._glowPeakColor)
 
-    // ── Update endpoint cap sprites ───────────────────────────────────────
-    if (this._endCaps?.length === 2) {
-      this._endCaps[0].position.copy(this._wavePoints[0])
-      this._endCaps[1].position.copy(this._wavePoints[N - 1])
-      // Soft pulse — draws the eye gently to the tips
-      const capPulse = 0.18 + 0.06 * Math.sin(t * 1.8)
-      this._endCaps[0].scale.setScalar(capPulse)
-      this._endCaps[1].scale.setScalar(capPulse)
-      this._endCaps[0].material.opacity = 0.22 + 0.08 * Math.sin(t * 1.8)
-      this._endCaps[1].material.opacity = 0.22 + 0.08 * Math.sin(t * 1.8 + 0.5)
-    }
-
-    // ── Update glow sprites along the wave ────────────────────────────────
-    if (this._glowSprites?.length) {
-      const SC = this._glowSprites.length
-      for (let k = 0; k < SC; k++) {
-        const normK  = k / (SC - 1)
-        const wIdx   = Math.min(Math.round(normK * (N - 1)), N - 1)
-        const sp     = this._glowSprites[k]
-        sp.position.copy(this._wavePoints[wIdx])
-
-        const localAmp = amps[wIdx] ?? 0
-
-        // Endpoint envelope: sin² for a steeper/faster fade near tips
-        const sinE = Math.sin(normK * Math.PI)
-        const envFade = sinE * sinE
-
-        // Breathing pulse — phase-staggered
-        const pulse = 1.0 + 0.30 * Math.sin(t * 1.3 + k * 0.72)
-        // Primary halos every 4th sprite
-        const primary = (k % 4 === 0) ? (1.28 + 0.16 * Math.sin(t * 1.9 + k * 1.1)) : 1.0
-
-        // CLAMP max sprite size — prevents "dumbbell" breakup at antinodes
-        const baseSize = 0.24
-        const ampBoost = Math.min(localAmp * 0.70, 0.30)   // cap: never > 0.54 total
-        sp.scale.setScalar((baseSize + ampBoost) * pulse * primary)
-
-        // Color temperature: cool cyan at nodes → warm golden-white at antinodes
-        // AdditiveBlending: material.color multiplies the texture
-        // At low amp → cyan (0.5, 0.88, 1.0)
-        // At high amp → warm white (1.0, 0.96, 0.72)
-        const warmth = Math.min(localAmp * 2.2, 1.0)
-        sp.material.color.setRGB(
-          0.50 + warmth * 0.50,
-          0.88 + warmth * 0.08,
-          1.00 - warmth * 0.28,
-        )
-
-        // Opacity — endpoint fade + mild amplitude boost
-        sp.material.opacity = envFade * (0.32 + Math.min(localAmp * 1.2, 0.36))
-      }
-    }
+    // Haze tube: very wide, very soft atmospheric glow
+    buildColoredTube(this.hazeTube, 0.20, 8,
+      this._hazeBaseColor, this._hazePeakColor)
   }
 
   _updateDynBeads(t) {
@@ -620,14 +492,14 @@ export class XianNode {
 
       if (peak) {
         mesh.position.copy(this._wavePoints[peak.idx])
-        const r       = 0.024 + peak.amp * 0.070
-        const pulse   = 0.75 + Math.sin(t * 4.8 + k * 1.7) * 0.25
+        const r       = 0.020 + peak.amp * 0.055
+        const pulse   = 0.72 + Math.sin(t * 4.8 + k * 1.7) * 0.28
         mesh.scale.setScalar(r)
-        mesh.material.opacity = Math.min(pulse * Math.min(peak.amp * 3.0, 1.0), 1)
+        mesh.material.opacity = Math.min(pulse * Math.min(peak.amp * 2.8, 1.0), 1)
         // Glow halo scales and fades with amplitude
         if (glow) {
-          glow.material.opacity = Math.min(pulse * peak.amp * 2.6, 0.90)
-          glow.scale.setScalar(6 + peak.amp * 8)
+          glow.material.opacity = Math.min(pulse * peak.amp * 2.2, 0.85)
+          glow.scale.setScalar(7 + peak.amp * 5)
         }
       } else {
         mesh.material.opacity = Math.max(0, mesh.material.opacity - 0.04)
@@ -663,7 +535,7 @@ export class XianNode {
       const minAmp = 0.06
       const lifeCurve = age < 0.15 ? age / 0.15 : Math.pow(1 - age, 1.5)
       const visible = localAmp > minAmp ? Math.min((localAmp - minAmp) / 0.25, 1.0) : 0
-      p.mesh.material.opacity = Math.max(0, Math.min(0.65, lifeCurve * visible * 3.5))
+      p.mesh.material.opacity = Math.max(0, Math.min(0.85, lifeCurve * visible * 4.5))
     }
   }
 
