@@ -88,9 +88,10 @@ export class XianNode {
     // At r=0.024 (group space) → 0.046 world → ~9px wide: geometric faces
     // are subpixel and invisible. Provides a smooth continuous halo baseline.
     this._glowContMat = new THREE.MeshBasicMaterial({
-      color: 0x00d4ff,   // constant cyan — fills gaps between sprites
-      transparent: true, opacity: 0.18,
+      vertexColors: true,   // amplitude-driven: dark at nodes, warm at antinodes
+      transparent: true, opacity: 0.55,
       side: THREE.FrontSide, depthWrite: false,
+      blending: THREE.AdditiveBlending,
     })
     this._glowContTube = new THREE.Mesh(
       new THREE.TubeGeometry(initCurve, N, 0.024, 6, false),
@@ -520,24 +521,56 @@ export class XianNode {
     buildColoredTube(this.spineTube, 0.013, 7,
       this._spineBaseColor, this._spinePeakColor)
 
-    // ── Rebuild continuous glow tube (uses same taper logic) ──────────────
+    // ── Rebuild continuous glow tube — amplitude-driven vertex colors ─────
+    // Node zones contribute near-zero light; antinode zones add warm amber glow.
+    // This ensures the glow tube REINFORCES the sprite color temperature
+    // instead of washing it out with constant cyan.
     if (this._glowContTube) {
-      const glowGeo = new THREE.TubeGeometry(curve, tubeSegs, 0.024, 6, false)
-      // Apply same radial taper
-      const gPos = glowGeo.attributes.position
-      const gVpr = 6 + 1
+      const gRadSegs = 6
+      const gVpr     = gRadSegs + 1
+      const glowGeo  = new THREE.TubeGeometry(curve, tubeSegs, 0.024, gRadSegs, false)
+      const gPos     = glowGeo.attributes.position
+
+      // Radial taper + vertex colors in a single pass
+      const gColors = new Float32Array((tubeSegs + 1) * gVpr * 3)
       for (let s = 0; s <= tubeSegs; s++) {
-        const taper = Math.min(s / tubeSegs / 0.18, 1.0, (1 - s / tubeSegs) / 0.18)
-        if (taper >= 1) continue
-        let cx = 0, cy = 0, cz = 0
-        for (let v = 0; v < 6; v++) { cx += gPos.getX(s*gVpr+v); cy += gPos.getY(s*gVpr+v); cz += gPos.getZ(s*gVpr+v) }
-        cx /= 6; cy /= 6; cz /= 6
+        const tFrac = s / tubeSegs
+        const taper = Math.min(tFrac / 0.18, 1.0, (1 - tFrac) / 0.18)
+
+        // Taper geometry
+        if (taper < 1) {
+          let cx = 0, cy = 0, cz = 0
+          for (let v = 0; v < gRadSegs; v++) {
+            cx += gPos.getX(s*gVpr+v); cy += gPos.getY(s*gVpr+v); cz += gPos.getZ(s*gVpr+v)
+          }
+          cx /= gRadSegs; cy /= gRadSegs; cz /= gRadSegs
+          for (let v = 0; v < gVpr; v++) {
+            const vi = s * gVpr + v
+            gPos.setXYZ(vi,
+              cx + (gPos.getX(vi) - cx) * taper,
+              cy + (gPos.getY(vi) - cy) * taper,
+              cz + (gPos.getZ(vi) - cz) * taper,
+            )
+          }
+        }
+
+        // Vertex color: dark indigo at nodes → warm amber-cyan at antinodes
+        const ampIdx  = Math.min(Math.round(tFrac * (N - 1)), N - 1)
+        const ampNorm = Math.min(amps[ampIdx] / 0.38, 1.0)
+        // Node: near-black (contributes nothing). Antinode: warm amber-gold.
+        // Using additive blending — dark = invisible, bright = adds warmth.
+        const tapFade = Math.min(taper / 0.70, 1.0)   // fade near tips
+        let gr = 0.00 + ampNorm * 0.75   // 0 → warm orange-gold
+        let gg = 0.05 + ampNorm * 0.62
+        let gb = 0.20 + ampNorm * 0.40   // cool blue tint remains slight
+        gr *= tapFade; gg *= tapFade; gb *= tapFade
         for (let v = 0; v < gVpr; v++) {
-          const vi = s * gVpr + v
-          gPos.setXYZ(vi, cx+(gPos.getX(vi)-cx)*taper, cy+(gPos.getY(vi)-cy)*taper, cz+(gPos.getZ(vi)-cz)*taper)
+          const idx = (s * gVpr + v) * 3
+          gColors[idx] = gr; gColors[idx+1] = gg; gColors[idx+2] = gb
         }
       }
       gPos.needsUpdate = true
+      glowGeo.setAttribute('color', new THREE.BufferAttribute(gColors, 3))
       this._glowContTube.geometry.dispose()
       this._glowContTube.geometry = glowGeo
     }
@@ -546,12 +579,12 @@ export class XianNode {
     if (this._endCaps?.length === 2) {
       this._endCaps[0].position.copy(this._wavePoints[0])
       this._endCaps[1].position.copy(this._wavePoints[N - 1])
-      // Soft pulse — draws the eye gently to the tips
-      const capPulse = 0.18 + 0.06 * Math.sin(t * 1.8)
+      // Extremely soft — just barely marks the tip without creating a spike
+      const capPulse = 0.10 + 0.03 * Math.sin(t * 1.8)
       this._endCaps[0].scale.setScalar(capPulse)
       this._endCaps[1].scale.setScalar(capPulse)
-      this._endCaps[0].material.opacity = 0.22 + 0.08 * Math.sin(t * 1.8)
-      this._endCaps[1].material.opacity = 0.22 + 0.08 * Math.sin(t * 1.8 + 0.5)
+      this._endCaps[0].material.opacity = 0.06 + 0.03 * Math.sin(t * 1.8)
+      this._endCaps[1].material.opacity = 0.06 + 0.03 * Math.sin(t * 1.8 + 0.5)
     }
 
     // ── Update glow sprites along the wave ────────────────────────────────
@@ -590,8 +623,8 @@ export class XianNode {
           1.00 - warmth * 0.45,
         )
 
-        // Opacity — endpoint fade + mild amplitude boost
-        sp.material.opacity = envFade * (0.32 + Math.min(localAmp * 1.2, 0.36))
+        // Opacity — endpoint fade + amplitude boost, antinodes can reach 0.78
+        sp.material.opacity = envFade * (0.28 + Math.min(localAmp * 1.6, 0.50))
       }
     }
   }
