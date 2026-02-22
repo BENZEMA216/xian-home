@@ -68,6 +68,8 @@ export class Scene {
     this._setupInput()
     this._onResize = this._handleResize.bind(this)
     window.addEventListener('resize', this._onResize)
+    // Apply mobile settings immediately on init
+    this._handleResize()
   }
 
   // ── Input ─────────────────────────────────────────────────
@@ -122,6 +124,31 @@ export class Scene {
   _handleResize() {
     const w = window.innerWidth, h = window.innerHeight
     this.camera.aspect = w / h
+
+    // Mobile portrait: widen FOV, raise lookAt to center wave in frame
+    const isMobile = w < 600
+    this.camera.fov = isMobile ? 80 : 55
+    this._orbitRadius = isMobile ? 7.0 : 8.5
+    if (isMobile) {
+      // Narrow the wave to fit portrait viewport (horizontal FOV is ~37°)
+      // Wave local L=4.0 × group scale 1.9 × narrowScale → ~3.6 world fits in frame
+      const narrowScale = 0.44   // world span: 4.0 * 1.9 * 0.44 = 3.34 — fits in portrait FOV
+      this.xian?.group.scale.set(narrowScale, 1.0, narrowScale)
+      this.xian?.group.position.setY(1.6)
+      this._orbitRadius = 5.5
+      this._orbitTarget.set(0, 2.35, 0)
+      this._orbitGoalV = 0.22
+      // Lock azimuth to exactly perpendicular on mobile (no drift clipping)
+      this._orbitGoalH = Math.PI / 2
+      this._orbitAngleH = Math.PI / 2
+    } else {
+      this.xian?.group.scale.set(1.0, 1.0, 1.0)
+      this.xian?.group.position.setY(1.6)
+      this._orbitRadius = 8.5
+      this._orbitTarget.set(0, 1.7, 0)
+      this._orbitGoalV = 0.45
+    }
+
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(w, h)
     this.composer.setSize(w, h)
@@ -131,9 +158,14 @@ export class Scene {
   // ── Camera orbit ──────────────────────────────────────────
 
   _updateCamera(t) {
-    if (this._autoOrbit) {
+    const isMobile = window.innerWidth < 600
+    if (this._autoOrbit && !isMobile) {
+      // Desktop: gentle azimuth drift — shows wave from slightly different angles
       this._orbitGoalH = 1.5708 + Math.sin(t * 0.14) * 0.28
       this._orbitGoalV = 0.45 + Math.sin(t * 0.04) * 0.03
+    } else if (this._autoOrbit && isMobile) {
+      // Mobile: lock to perpendicular — prevents wave from clipping screen edges
+      this._orbitGoalH = Math.PI / 2
     }
     // Smooth lerp
     this._orbitAngleH += (this._orbitGoalH - this._orbitAngleH) * 0.04

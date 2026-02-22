@@ -528,7 +528,7 @@ html, body {
 /* ── Ambient Input Bar ──────────────────────────────────────── */
 #ambientInput {
   position: fixed;
-  bottom: max(28px, env(safe-area-inset-bottom, 28px));
+  bottom: max(24px, env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   width: min(540px, 90vw);
@@ -663,7 +663,7 @@ html, body {
 /* ── Ambient greeting ─────────────────────────────────── */
 #xianGreeting {
   position: fixed;
-  bottom: 92px;
+  bottom: calc(max(24px, env(safe-area-inset-bottom)) + 66px);
   left: 50%;
   transform: translateX(-50%);
   font-size: 11px;
@@ -690,4 +690,48 @@ html, body {
 @keyframes inputBreathe {
   0%, 100% { box-shadow: 0 0 20px rgba(0,212,255,0.05), 0 4px 24px rgba(0,0,0,0.4); }
   50%       { box-shadow: 0 0 32px rgba(0,212,255,0.12), 0 4px 24px rgba(0,0,0,0.5); }
+}
+
+/* ── Mobile Responsive ─────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Topbar: slightly smaller on mobile */
+  #topbar { padding: 10px 14px; }
+  .xian-name { font-size: 16px; letter-spacing: 3px; }
+
+  /* Larger touch targets */
+  .icon-btn { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+
+  /* Status pill: smaller */
+  #statusPill { font-size: 10px; padding: 4px 10px; }
+
+  /* Input bar: full-width-ish, bigger on mobile */
+  #ambientInput {
+    width: calc(100vw - 32px);
+    padding: 12px 16px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    border-radius: 24px;
+  }
+  #ambientText { font-size: 15px; }
+
+  /* Greeting: tighter to input */
+  #xianGreeting {
+    font-size: 10px;
+    letter-spacing: 2px;
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 68px);
+  }
+
+  /* Chat panel: full screen on mobile */
+  #chatPanel {
+    width: 100vw !important;
+    right: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 70vh !important;
+    bottom: 0 !important;
+  }
+}
+
+/* Keyboard-aware: when viewport shrinks (keyboard up), hide greeting */
+@media (max-height: 500px) {
+  #xianGreeting { display: none; }
+  #ambientInput { bottom: 8px; }
 }
