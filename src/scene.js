@@ -50,9 +50,9 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera))
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /*strength*/  1.72,
-      /*radius*/    0.40,
-      /*threshold*/ 0.13,
+      /*strength*/  1.65,
+      /*radius*/    0.58,
+      /*threshold*/ 0.09,
     )
     this.composer.addPass(this.bloomPass)
 
