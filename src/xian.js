@@ -89,7 +89,7 @@ export class XianNode {
     // are subpixel and invisible. Provides a smooth continuous halo baseline.
     this._glowContMat = new THREE.MeshBasicMaterial({
       color: 0x00d4ff,   // constant cyan — fills gaps between sprites
-      transparent: true, opacity: 0.28,
+      transparent: true, opacity: 0.18,
       side: THREE.FrontSide, depthWrite: false,
     })
     this._glowContTube = new THREE.Mesh(
@@ -367,10 +367,10 @@ export class XianNode {
       idle: {
         harmonics: [
           // [n,  w,    phOff,          zScale, speedMult]
-          [1, 1.00,  0,               0.40,   1.000],
-          [3, 0.65,  Math.PI / 2,     0.38,   0.783],
-          [5, 0.42,  Math.PI / 4,     0.35,   1.174],
-          [7, 0.24,  Math.PI * 0.9,   0.32,   0.891],
+          [1, 1.00,  0,               0.50,   1.000],
+          [3, 0.65,  Math.PI / 2,     0.46,   0.783],
+          [5, 0.42,  Math.PI / 4,     0.42,   1.174],
+          [7, 0.24,  Math.PI * 0.9,   0.38,   0.891],
         ],
         baseSpeed: 0.80, amp: 0.50,
       },
