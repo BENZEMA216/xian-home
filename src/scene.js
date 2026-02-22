@@ -197,11 +197,11 @@ export class Scene {
   _buildNebula() {
     const clouds = [
       // [x, y, z,  scale,  r,   g,  b,  peakAlpha, rotation]
-      [ -7,  3, -14, 11.0,  55,  10, 140, 0.22,  0.4  ],  // deep purple, left
-      [  6,  1, -11,  9.0,   0,  80, 110, 0.16,  -0.6 ],  // teal, right
-      [  0,  6, -18, 14.0,  30,   5,  80, 0.14,   0.0 ],  // indigo, top-center
-      [ -3, -1,  -9,  6.5,   0, 100, 160, 0.12,   1.0 ],  // cyan accent, lower-left
-      [  4,  4, -16,  8.0,  70,  20, 120, 0.10,  -0.3 ],  // violet, upper-right
+      [ -7,  3, -14, 11.0,  55,  10, 140, 0.18,  0.4  ],  // deep purple, left
+      [  6,  1, -11,  9.0,   0,  60,  90, 0.12,  -0.6 ],  // teal, right — de-saturated
+      [  0,  9, -22, 12.0,  20,   0,  60, 0.07,   0.0 ],  // indigo, far top-center — dimmed+pushed back
+      [ -3, -1, -10,  6.5,   0,  80, 140, 0.09,   1.0 ],  // cyan accent, lower-left
+      [  4,  4, -16,  8.0,  70,  20, 120, 0.09,  -0.3 ],  // violet, upper-right
     ]
 
     for (const [x, y, z, scale, r, g, b, peak, rot] of clouds) {

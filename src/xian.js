@@ -105,9 +105,9 @@ export class XianNode {
     const gctx = gc.getContext('2d')
     const gg = gctx.createRadialGradient(sz/2, sz/2, 0, sz/2, sz/2, sz/2)
     gg.addColorStop(0.00, 'rgba(255,255,255,1.00)')
-    gg.addColorStop(0.15, 'rgba(210,245,255,0.85)')
-    gg.addColorStop(0.40, 'rgba(0,212,255,0.35)')
-    gg.addColorStop(0.70, 'rgba(0,140,220,0.10)')
+    gg.addColorStop(0.08, 'rgba(230,248,255,0.92)')
+    gg.addColorStop(0.25, 'rgba(0,212,255,0.55)')
+    gg.addColorStop(0.55, 'rgba(0,150,220,0.18)')
     gg.addColorStop(1.00, 'rgba(0,80,180,0.00)')
     gctx.fillStyle = gg
     gctx.fillRect(0, 0, sz, sz)
@@ -489,10 +489,10 @@ export class XianNode {
         const waveT  = s / tubeSegs
         const ampIdx = Math.min(Math.round(waveT * (N - 1)), N - 1)
         const ampNorm = Math.min(amps[ampIdx] / 0.38, 1.0)
-        // Pure amplitude-driven: dark blue near zero → bright golden-white at peak.
+        // Pure amplitude-driven: indigo-black near zero → bright golden-white at peak.
         // Endpoints naturally vanish (amps[0] = 0) — no spike artifacts.
-        // Dark nodes shift to deep-cyan, making harmonic standing-wave nodes visible.
-        const darkR = 0.05, darkG = 0.18, darkB = 0.42   // deep-cyan near-black
+        // Dark nodes shift to deep indigo, making standing-wave nodes visible.
+        const darkR = 0.03, darkG = 0.08, darkB = 0.35   // deep indigo near-black
         let cr = darkR + (peakCol.r - darkR) * ampNorm
         let cg = darkG + (peakCol.g - darkG) * ampNorm
         let cb = darkB + (peakCol.b - darkB) * ampNorm
@@ -579,15 +579,15 @@ export class XianNode {
         const ampBoost = Math.min(localAmp * 0.70, 0.30)   // cap: never > 0.54 total
         sp.scale.setScalar((baseSize + ampBoost) * pulse * primary)
 
-        // Color temperature: cool cyan at nodes → warm golden-white at antinodes
+        // Color temperature: cool blue at nodes → warm amber-gold at antinodes
         // AdditiveBlending: material.color multiplies the texture
-        // At low amp → cyan (0.5, 0.88, 1.0)
-        // At high amp → warm white (1.0, 0.96, 0.72)
-        const warmth = Math.min(localAmp * 2.2, 1.0)
+        // At low amp → cool blue (0.35, 0.72, 1.0)
+        // At high amp → warm gold (1.0, 0.92, 0.55)
+        const warmth = Math.min(localAmp * 2.5, 1.0)
         sp.material.color.setRGB(
-          0.50 + warmth * 0.50,
-          0.88 + warmth * 0.08,
-          1.00 - warmth * 0.28,
+          0.35 + warmth * 0.65,
+          0.72 + warmth * 0.20,
+          1.00 - warmth * 0.45,
         )
 
         // Opacity — endpoint fade + mild amplitude boost
@@ -663,7 +663,7 @@ export class XianNode {
       const minAmp = 0.06
       const lifeCurve = age < 0.15 ? age / 0.15 : Math.pow(1 - age, 1.5)
       const visible = localAmp > minAmp ? Math.min((localAmp - minAmp) / 0.25, 1.0) : 0
-      p.mesh.material.opacity = Math.max(0, Math.min(0.65, lifeCurve * visible * 3.5))
+      p.mesh.material.opacity = Math.max(0, Math.min(0.45, lifeCurve * visible * 2.8))
     }
   }
 
