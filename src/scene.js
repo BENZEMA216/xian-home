@@ -41,6 +41,7 @@ export class Scene {
 
     this.signalNodes = new SignalNodes(this.scene, onNodeTap)
 
+    this._buildNebula()
     this._buildParticles()
     this._buildNetworkLines()
 
@@ -58,7 +59,7 @@ export class Scene {
     // Camera orbit state
     this._orbitTarget   = new THREE.Vector3(0, 1.7, 0)
     this._orbitAngleH   = 1.5708    // horizontal angle (radians)
-    this._orbitAngleV   = 0.45   // ~16° elevation — cinematic low angle
+    this._orbitAngleV   = 0.52   // ~30° elevation — shows 3D depth
     this._orbitRadius   = 8.5
     this._orbitGoalH    = 1.5708
     this._orbitGoalV    = this._orbitAngleV
@@ -154,7 +155,7 @@ export class Scene {
       this.xian?.group.position.setY(1.6)
       this._orbitRadius = 8.5
       this._orbitTarget.set(0, 1.7, 0)
-      this._orbitGoalV = 0.45
+      this._orbitGoalV = 0.52
     }
 
     this.camera.updateProjectionMatrix()
@@ -168,9 +169,10 @@ export class Scene {
   _updateCamera(t) {
     const isMobile = window.innerWidth < 600 && window.innerHeight > window.innerWidth
     if (this._autoOrbit && !isMobile) {
-      // Desktop: gentle azimuth drift — shows wave from slightly different angles
-      this._orbitGoalH = 1.5708 + Math.sin(t * 0.14) * 0.28
-      this._orbitGoalV = 0.45 + Math.sin(t * 0.04) * 0.03
+      // Desktop: wider azimuth drift so camera occasionally shows Z depth
+      // Figure-8-ish path: slow vertical + faster azimuth
+      this._orbitGoalH = 1.5708 + Math.sin(t * 0.11) * 0.44
+      this._orbitGoalV = 0.52 + Math.sin(t * 0.030) * 0.13
     } else if (this._autoOrbit && isMobile) {
       // Mobile: lock to perpendicular — prevents wave from clipping screen edges
       this._orbitGoalH = Math.PI / 2
@@ -186,6 +188,52 @@ export class Scene {
       Math.sin(this._orbitAngleH) * r * Math.cos(this._orbitAngleV),
     )
     this.camera.lookAt(this._orbitTarget)
+  }
+
+  // ── Background nebula ────────────────────────────────────
+  // Soft glow sprites far behind the scene — add atmospheric depth
+  // without competing with the main wave.
+
+  _buildNebula() {
+    const clouds = [
+      // [x, y, z,  scale,  r,   g,  b,  peakAlpha, rotation]
+      [ -7,  3, -14,  9.0,  55,  10, 140, 0.22,  0.4  ],  // deep purple, left
+      [  6,  1, -11,  7.5,   0,  80, 110, 0.16,  -0.6 ],  // teal, right
+      [  0,  6, -18, 12.0,  30,   5,  80, 0.14,   0.0 ],  // indigo, top-center
+      [ -3, -1,  -9,  5.0,   0, 100, 160, 0.12,   1.0 ],  // cyan accent, lower-left
+    ]
+
+    for (const [x, y, z, scale, r, g, b, peak, rot] of clouds) {
+      const size = 256
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = size
+      const ctx = canvas.getContext('2d')
+
+      ctx.save()
+      ctx.translate(size / 2, size / 2)
+      ctx.rotate(rot)
+      ctx.scale(1, 0.55)   // squash to ellipse
+
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, size / 2)
+      grad.addColorStop(0.00, `rgba(${r},${g},${b},${peak})`)
+      grad.addColorStop(0.30, `rgba(${r},${g},${b},${(peak * 0.55).toFixed(3)})`)
+      grad.addColorStop(0.65, `rgba(${r},${g},${b},${(peak * 0.18).toFixed(3)})`)
+      grad.addColorStop(1.00, `rgba(${r},${g},${b},0)`)
+      ctx.fillStyle = grad
+      ctx.fillRect(-size / 2, -size / 2, size, size)
+      ctx.restore()
+
+      const mat = new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(canvas),
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+      const sprite = new THREE.Sprite(mat)
+      sprite.position.set(x, y, z)
+      sprite.scale.setScalar(scale)
+      this.scene.add(sprite)
+    }
   }
 
   // ── Ambient particles ─────────────────────────────────────

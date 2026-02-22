@@ -9,16 +9,32 @@ const C = {
   white:  0xffffff,
 }
 
-// ─── 弦 Avatar v2 ─────────────────────────────────────────
-// A vibrating string whose vibration plane rotates in 3D space.
-// Dynamic antinodes light up at actual wave peaks.
-// Trail particles shed from the string as it vibrates.
+// ─── 弦 Avatar v3 ─────────────────────────────────────────
+//
+// Core physics: elliptical polarization.
+//
+// Each harmonic contributes two orthogonal components (Y and Z)
+// with a 90° temporal phase offset:
+//
+//   dY += spatial(norm) * sin(ωt + φ)
+//   dZ += spatial(norm) * cos(ωt + φ) * zScale
+//
+// Because sin² + cos² = 1, the displacement vector at any cross-
+// section has CONSTANT magnitude — the string can NEVER go flat.
+// With zScale < 1 the path is an ellipse (not a circle), giving
+// a gentler 3D presence without looking like a spinning tube.
+//
+// Multiple harmonics at different φ offsets create cross-sections
+// where the ellipses have different orientations → complex
+// Lissajous-like 3D shapes that are always alive.
+//
 export class XianNode {
   constructor() {
     this.group = new THREE.Group()
-    this.state  = 'idle'
-    this._dynBeads = []
+    this.state   = 'idle'
+    this._dynBeads   = []
     this._trailParts = []
+    this._waveAmps   = []
 
     this._buildString()
     this._buildDynBeads()
@@ -27,21 +43,19 @@ export class XianNode {
     this._buildTrailParticles()
     this._buildPointLight()
 
-    // Zero out amps so trail particles don't crash before first wave update
     this._waveAmps = new Array(this._waveN).fill(0)
   }
 
   // ── Construction ──────────────────────────────────────────
 
   _buildString() {
-    const N = 80   // more segments → smoother 3D curves
+    const N = 80
     const L = 4.0
     this._waveN = N
     this._waveL = L
     this._wavePoints = Array.from({ length: N }, (_, i) =>
       new THREE.Vector3((i / (N - 1)) * L - L / 2, 0, 0)
     )
-
     const initCurve = new THREE.CatmullRomCurve3(
       this._wavePoints.map(v => v.clone())
     )
@@ -56,7 +70,7 @@ export class XianNode {
     )
     this.group.add(this.spineTube)
 
-    // Glow layer: medium cyan, BackSide → no z-fight
+    // Glow (medium, BackSide → no z-fight)
     this._glowTubeMat = new THREE.MeshBasicMaterial({
       color: C.cyan, transparent: true, opacity: 0.24,
       side: THREE.BackSide,
@@ -67,7 +81,7 @@ export class XianNode {
     )
     this.group.add(this.glowTube)
 
-    // Haze layer: wide, very soft
+    // Haze (wide, very soft)
     this._hazeTubeMat = new THREE.MeshBasicMaterial({
       color: C.cyan, transparent: true, opacity: 0.07,
       side: THREE.BackSide,
@@ -80,8 +94,7 @@ export class XianNode {
   }
 
   _buildDynBeads() {
-    // Up to 5 bright spheres that live at actual wave amplitude peaks.
-    // No fixed positions — they chase the antinodes each frame.
+    // Dynamic antinodes: bright spheres that chase the actual wave peaks.
     const geo = new THREE.SphereGeometry(1, 10, 10)
     for (let i = 0; i < 5; i++) {
       const mat = new THREE.MeshBasicMaterial({
@@ -153,33 +166,32 @@ export class XianNode {
     this.group.add(beam)
 
     this.groundGlow = this._makeGlowSprite(C.cyan)
-    this.groundGlow.scale.setScalar(2.2)
-    this.groundGlow.material.opacity = 0.04
+    this.groundGlow.scale.setScalar(2.4)
+    this.groundGlow.material.opacity = 0.05
     this.groundGlow.position.y = -1.1
     this.group.add(this.groundGlow)
   }
 
   _buildTrailParticles() {
-    // 20 tiny particles that spawn at the string and drift upward.
-    // Only visible at high-amplitude segments — representing shed energy.
-    const geo = new THREE.SphereGeometry(0.008, 4, 4)
-    for (let i = 0; i < 20; i++) {
+    // 28 particles: spawn at high-amplitude segments, drift outward and fade.
+    // Larger size + higher opacity so they're actually visible.
+    const geo = new THREE.SphereGeometry(0.014, 6, 6)
+    for (let i = 0; i < 28; i++) {
       const mat = new THREE.MeshBasicMaterial({
         color: C.cyan, transparent: true, opacity: 0,
         blending: THREE.AdditiveBlending, depthWrite: false,
       })
       const mesh = new THREE.Mesh(geo, mat)
-      const norm = Math.random()
       this.group.add(mesh)
       this._trailParts.push({
         mesh,
-        norm,
-        life: Math.random(),
-        speed: 0.25 + Math.random() * 0.35,
+        norm:  Math.random(),
+        life:  Math.random(),
+        speed: 0.18 + Math.random() * 0.28,
         drift: new THREE.Vector3(
-          (Math.random() - 0.5) * 0.25,
-          0.18 + Math.random() * 0.38,
-          (Math.random() - 0.5) * 0.25,
+          (Math.random() - 0.5) * 0.32,
+          0.20 + Math.random() * 0.50,
+          (Math.random() - 0.5) * 0.32,
         ),
       })
     }
@@ -196,14 +208,15 @@ export class XianNode {
     this.state = state
     const colors = { idle: C.cyan, chatting: C.green, working: C.amber, thinking: C.purple }
     const col = colors[state] ?? C.cyan
+
     this.statusRing.material.color.setHex(col)
     this.light.color.setHex(col)
     this._glowTubeMat.color.setHex(col)
     this._hazeTubeMat.color.setHex(col)
-    // Core wire: near-white for cyan/green, warm white for amber, lavender for purple
-    const coreCol = (col === C.cyan) ? 0xe8f8ff :
-                    (col === C.green) ? 0xeeffee :
-                    (col === C.amber) ? 0xfff4cc : 0xf0e8ff
+    const coreCol = col === C.cyan   ? 0xe8f8ff
+                  : col === C.green  ? 0xeeffee
+                  : col === C.amber  ? 0xfff4cc
+                  :                   0xf0e8ff
     this._tubeMat.color.setHex(coreCol)
 
     this.group.remove(this.glowSprite)
@@ -212,7 +225,6 @@ export class XianNode {
     this.glowSprite.scale.setScalar(0.28)
     this.group.add(this.glowSprite)
 
-    // Update trail particle colors
     for (const { mesh } of this._trailParts) {
       mesh.material.color.setHex(col)
     }
@@ -230,68 +242,102 @@ export class XianNode {
   }
 
   _updateWave(t) {
-    // ── The core idea: a 1D standing wave projected into 3D ──────────
-    // Rather than computing yD and zD separately, we compute a single
-    // scalar displacement d (how far the string point is from rest),
-    // then project it into 3D via a slowly-rotating vibration plane:
-    //   yD = d * cos(angle)
-    //   zD = d * sin(angle)
-    // where angle = t * vibRot rotates the plane around the X axis.
+    // ── Elliptical polarization ─────────────────────────────
     //
-    // Effect: the string's silhouette is always a standing wave, but
-    // its orientation in 3D continuously changes — the string feels
-    // alive and three-dimensional rather than flat.
+    // Each harmonic: [spatial_n, weight, temporal_phaseOffset, zScale]
+    //
+    //   dY += w * sin(n*π*norm) * env * amp * sin(ω*t + φ)
+    //   dZ += w * sin(n*π*norm) * env * amp * cos(ω*t + φ) * zScale
+    //
+    // At each cross-section the (dY, dZ) vector traces an ellipse.
+    // amplitude² = sin²(ωt+φ) + zScale²·cos²(ωt+φ) ≥ min(1, zScale²)
+    // → NEVER zero when zScale > 0, so the string is ALWAYS 3D.
+    //
+    // ── Detuned harmonics — the key to a living, never-flat string ──
+    //
+    // Each harmonic: [n, weight, phaseOffset, zScale, speedMult]
+    //
+    //   dY += spatial * sin(baseSpeed * speedMult * t + phOff)
+    //   dZ += spatial * cos(baseSpeed * speedMult * t + phOff) * zScale
+    //
+    // Harmonics run at slightly DIFFERENT speeds (speedMult ≠ 1.0).
+    // Their phase relationship drifts continuously → the wave shape
+    // slowly morphs over a ~35s cycle. When one harmonic's Y component
+    // is near zero, the other is at a different phase and keeps the
+    // string visible. The string is NEVER flat.
+    //
+    // zScale gives 3D depth without spinning-tube look.
 
     const configs = {
       idle: {
-        harmonics: [[1, 1.00, 0], [2, 0.35, Math.PI / 2]],
-        speed: 0.9,  amp: 0.50,  vibRot: 0.32,
+        // H1 + H3 + H5 + H7 — rich multi-modal standing wave, serene
+        harmonics: [
+          // [n,  w,    phOff,          zScale, speedMult]
+          [1, 1.00,  0,               0.80,   1.000],
+          [3, 0.65,  Math.PI / 2,     0.72,   0.783],
+          [5, 0.32,  Math.PI / 4,     0.60,   1.174],
+          [7, 0.14,  Math.PI * 0.9,   0.48,   0.891],
+        ],
+        baseSpeed: 0.80, amp: 0.46,
       },
       chatting: {
-        harmonics: [[2, 1.00, 0], [1, 0.30, Math.PI / 2]],
-        speed: 2.2,  amp: 0.45,  vibRot: 0.68,
+        // H2 + H1 + H4 + H6 — lively, quick, two-loop interference
+        harmonics: [
+          [2, 1.00,  0,               0.78,   1.000],
+          [1, 0.35,  Math.PI / 3,     0.70,   1.336],
+          [4, 0.28,  Math.PI * 0.8,   0.55,   0.912],
+          [6, 0.14,  Math.PI * 1.5,   0.44,   1.220],
+        ],
+        baseSpeed: 2.0, amp: 0.40,
       },
       working: {
-        harmonics: [[3, 1.00, 0], [2, 0.38, Math.PI / 2]],
-        speed: 3.0,  amp: 0.36,  vibRot: 1.30,
+        // H3 + H2 + H5 + H7 — tight fast weave, focused
+        harmonics: [
+          [3, 1.00,  0,               0.72,   1.000],
+          [2, 0.38,  Math.PI / 2,     0.64,   0.823],
+          [5, 0.26,  Math.PI * 1.3,   0.52,   1.172],
+          [7, 0.14,  Math.PI * 0.6,   0.40,   0.950],
+        ],
+        baseSpeed: 2.8, amp: 0.33,
       },
       thinking: {
+        // H1 + H3 + H5 + H7 + H2 at five tempos → deep Lissajous evolution
         harmonics: [
-          [1, 1.00, 0],
-          [3, 0.52, Math.PI / 2],
-          [5, 0.18, 0.8],
+          [1, 1.00,  0,               0.88,   1.000],
+          [3, 0.60,  Math.PI / 2,     0.76,   0.802],
+          [5, 0.32,  Math.PI / 4,     0.60,   1.175],
+          [7, 0.16,  Math.PI * 0.9,   0.50,   0.891],
+          [2, 0.20,  Math.PI * 1.7,   0.44,   1.431],
         ],
-        speed: 1.2,  amp: 0.52,  vibRot: 0.48,
+        baseSpeed: 1.0, amp: 0.50,
       },
     }
-    const { harmonics, speed, amp, vibRot } = configs[this.state] ?? configs.idle
 
-    // Vibration plane angle — rotates around X axis over time
-    const angle = t * vibRot
-    const cosA  = Math.cos(angle)
-    const sinA  = Math.sin(angle)
-
+    const { harmonics, baseSpeed, amp } = configs[this.state] ?? configs.idle
     const N = this._waveN
     const L = this._waveL
     const amps = new Array(N)
 
     for (let i = 0; i < N; i++) {
       const norm     = i / (N - 1)
-      const envelope = Math.sin(norm * Math.PI)  // fixed nodes at both ends
-      let d = 0
-      for (const [n, w, phOff] of harmonics) {
-        d += w * Math.sin(n * Math.PI * norm) * Math.sin(t * speed + phOff) * amp * envelope
+      const envelope = Math.sin(norm * Math.PI)
+      let dY = 0
+      let dZ = 0
+
+      for (const [n, w, phOff, zScale, speedMult] of harmonics) {
+        const spatial = w * Math.sin(n * Math.PI * norm) * amp * envelope
+        const phase   = t * baseSpeed * speedMult + phOff
+        dY += spatial * Math.sin(phase)
+        dZ += spatial * Math.cos(phase) * zScale
       }
-      const yD = d * cosA
-      const zD = d * sinA
-      this._wavePoints[i].set(norm * L - L / 2, yD, zD)
-      amps[i] = Math.abs(d)  // scalar amplitude (before plane rotation)
+
+      this._wavePoints[i].set(norm * L - L / 2, dY, dZ)
+      amps[i] = Math.sqrt(dY * dY + dZ * dZ)
     }
 
     this._waveAmps = amps
 
-    // Rebuild all 3 tube layers
-    const curve = new THREE.CatmullRomCurve3(this._wavePoints)
+    const curve   = new THREE.CatmullRomCurve3(this._wavePoints)
     const rebuild = (tube, r, segs) => {
       const geo = new THREE.TubeGeometry(curve, N, r, segs, false)
       tube.geometry.dispose()
@@ -305,8 +351,9 @@ export class XianNode {
   _updateDynBeads(t) {
     const amps = this._waveAmps
     const N    = this._waveN
+    if (!amps || !amps.length) return
 
-    // Find local maxima (antinodes) — the true peaks of the standing wave
+    // Find local amplitude maxima (antinodes)
     const peaks = []
     for (let i = 2; i < N - 2; i++) {
       if (
@@ -327,11 +374,9 @@ export class XianNode {
         mesh.position.copy(this._wavePoints[peak.idx])
         const r       = 0.018 + peak.amp * 0.050
         const pulse   = 0.72 + Math.sin(t * 4.8 + k * 1.7) * 0.28
-        const opacity = pulse * Math.min(peak.amp * 2.4, 1.0)
         mesh.scale.setScalar(r)
-        mesh.material.opacity = Math.min(opacity, 1)
+        mesh.material.opacity = Math.min(pulse * Math.min(peak.amp * 2.4, 1.0), 1)
       } else {
-        // No peak → gracefully fade out
         mesh.material.opacity = Math.max(0, mesh.material.opacity - 0.04)
       }
     }
@@ -341,20 +386,18 @@ export class XianNode {
     const N = this._waveN
     for (const p of this._trailParts) {
       p.life += p.speed * 0.016
-
       if (p.life > 1.0) {
         p.life = 0
         p.norm = Math.random()
         p.drift.set(
-          (Math.random() - 0.5) * 0.28,
-          0.16 + Math.random() * 0.42,
-          (Math.random() - 0.5) * 0.28,
+          (Math.random() - 0.5) * 0.26,
+          0.14 + Math.random() * 0.40,
+          (Math.random() - 0.5) * 0.26,
         )
       }
-
-      const idx     = Math.min(Math.round(p.norm * (N - 1)), N - 1)
-      const basePos = this._wavePoints[idx]
-      const age     = p.life
+      const idx      = Math.min(Math.round(p.norm * (N - 1)), N - 1)
+      const basePos  = this._wavePoints[idx]
+      const age      = p.life
       const localAmp = this._waveAmps[idx] ?? 0
 
       p.mesh.position.set(
@@ -362,10 +405,11 @@ export class XianNode {
         basePos.y + p.drift.y * age,
         basePos.z + p.drift.z * age,
       )
-
-      // Only visible at high-amplitude points; fade in then out
-      const lifeCurve = age < 0.25 ? (age / 0.25) : (1 - age) / 0.75
-      p.mesh.material.opacity = Math.max(0, lifeCurve * localAmp * 1.6)
+      // Particles only visible at genuinely high-amplitude sections
+      const minAmp = 0.18
+      const lifeCurve = age < 0.2 ? age / 0.2 : (1 - age) / 0.8
+      const visible = localAmp > minAmp ? (localAmp - minAmp) / (0.5 - minAmp) : 0
+      p.mesh.material.opacity = Math.max(0, Math.min(1, lifeCurve * visible * 3.8))
     }
   }
 
@@ -376,19 +420,16 @@ export class XianNode {
     this.glowSprite.scale.setScalar(0.14 + Math.sin(t * 2.1) * 0.02)
     this.glowSprite.material.opacity = 0.06 + Math.sin(t * 1.8) * 0.02
 
-    // Glow tube breathes
     this._glowTubeMat.opacity = 0.22 + Math.sin(t * 1.8) * 0.07
     this._hazeTubeMat.opacity = 0.07 + Math.sin(t * 1.2) * 0.025
-
-    // Core wire pulses slightly
-    this._tubeMat.opacity = 0.88 + Math.abs(Math.sin(t * 1.0)) * 0.10
+    this._tubeMat.opacity     = 0.88 + Math.abs(Math.sin(t * 1.0)) * 0.10
 
     if (this._beamMat) {
       this._beamMat.opacity = 0.07 + Math.sin(t * 1.0) * 0.04
     }
     if (this.groundGlow) {
-      this.groundGlow.material.opacity = 0.03 + Math.sin(t * 0.8) * 0.015
-      this.groundGlow.scale.setScalar(2.0 + Math.sin(t * 0.6) * 0.25)
+      this.groundGlow.material.opacity = 0.035 + Math.sin(t * 0.8) * 0.015
+      this.groundGlow.scale.setScalar(2.2 + Math.sin(t * 0.6) * 0.28)
     }
   }
 
@@ -420,7 +461,7 @@ export class XianNode {
         this.group.position.set(targetPos.x, targetPos.y, targetPos.z)
         this.glowSprite.material.opacity = 0.22
       } else {
-        const tp = (pct - 0.46) / 0.54
+        const tp     = (pct - 0.46) / 0.54
         const spring = 1 + Math.exp(-tp * 8) * Math.cos(tp * 14) * 0.35
         this.group.scale.setScalar(Math.max(0, spring) * startScale)
         this.glowSprite.material.opacity = 0.09 + Math.sin(tp * Math.PI) * 0.12
