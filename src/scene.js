@@ -50,9 +50,9 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera))
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /*strength*/  1.55,
-      /*radius*/    0.28,
-      /*threshold*/ 0.18,
+      /*strength*/  1.72,
+      /*radius*/    0.40,
+      /*threshold*/ 0.13,
     )
     this.composer.addPass(this.bloomPass)
 
@@ -169,10 +169,10 @@ export class Scene {
   _updateCamera(t) {
     const isMobile = window.innerWidth < 600 && window.innerHeight > window.innerWidth
     if (this._autoOrbit && !isMobile) {
-      // Desktop: wider azimuth drift so camera occasionally shows Z depth
+      // Desktop: wider azimuth drift to reveal Z-depth of 3D string
       // Figure-8-ish path: slow vertical + faster azimuth
-      this._orbitGoalH = 1.5708 + Math.sin(t * 0.11) * 0.44
-      this._orbitGoalV = 0.52 + Math.sin(t * 0.030) * 0.13
+      this._orbitGoalH = 1.5708 + Math.sin(t * 0.11) * 0.68
+      this._orbitGoalV = 0.52 + Math.sin(t * 0.035) * 0.16
     } else if (this._autoOrbit && isMobile) {
       // Mobile: lock to perpendicular — prevents wave from clipping screen edges
       this._orbitGoalH = Math.PI / 2
@@ -197,10 +197,11 @@ export class Scene {
   _buildNebula() {
     const clouds = [
       // [x, y, z,  scale,  r,   g,  b,  peakAlpha, rotation]
-      [ -7,  3, -14,  9.0,  55,  10, 140, 0.22,  0.4  ],  // deep purple, left
-      [  6,  1, -11,  7.5,   0,  80, 110, 0.16,  -0.6 ],  // teal, right
-      [  0,  6, -18, 12.0,  30,   5,  80, 0.14,   0.0 ],  // indigo, top-center
-      [ -3, -1,  -9,  5.0,   0, 100, 160, 0.12,   1.0 ],  // cyan accent, lower-left
+      [ -7,  3, -14, 11.0,  55,  10, 140, 0.30,  0.4  ],  // deep purple, left
+      [  6,  1, -11,  9.0,   0,  80, 110, 0.22,  -0.6 ],  // teal, right
+      [  0,  6, -18, 14.0,  30,   5,  80, 0.20,   0.0 ],  // indigo, top-center
+      [ -3, -1,  -9,  6.5,   0, 100, 160, 0.16,   1.0 ],  // cyan accent, lower-left
+      [  4,  4, -16,  8.0,  70,  20, 120, 0.14,  -0.3 ],  // violet, upper-right
     ]
 
     for (const [x, y, z, scale, r, g, b, peak, rot] of clouds) {
@@ -268,7 +269,7 @@ export class Scene {
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     const mat = new THREE.PointsMaterial({
-      map: tex, size: 0.08, transparent: true, opacity: 0.22,
+      map: tex, size: 0.10, transparent: true, opacity: 0.28,
       sizeAttenuation: true, depthWrite: false,
       blending: THREE.AdditiveBlending,
     })

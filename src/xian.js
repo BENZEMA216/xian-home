@@ -60,9 +60,12 @@ export class XianNode {
       this._wavePoints.map(v => v.clone())
     )
 
-    // Core: bright near-white wire
+    // Core: bright wire with vertex-color gradient (cool blue-white → warm white)
+    this._spineBaseColor = new THREE.Color(0.82, 0.94, 1.0)  // cool blue-white
+    this._spinePeakColor = new THREE.Color(1.0, 0.96, 0.86)  // warm white at peaks
     this._tubeMat = new THREE.MeshBasicMaterial({
-      color: 0xe8f8ff, transparent: true, opacity: 0.95,
+      color: 0xffffff, transparent: true, opacity: 0.95,
+      vertexColors: true,
     })
     this.spineTube = new THREE.Mesh(
       new THREE.TubeGeometry(initCurve, N, 0.010, 6, false),
@@ -71,9 +74,13 @@ export class XianNode {
     this.group.add(this.spineTube)
 
     // Glow (medium, BackSide → no z-fight)
+    // Uses vertex colors: lerps from state color → warm white at amplitude peaks
+    this._glowBaseColor = new THREE.Color(C.cyan)
+    this._glowPeakColor = new THREE.Color(1.0, 0.82, 0.50) // warm amber-gold at peaks
     this._glowTubeMat = new THREE.MeshBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.24,
+      color: 0xffffff, transparent: true, opacity: 0.24,
       side: THREE.BackSide,
+      vertexColors: true,
     })
     this.glowTube = new THREE.Mesh(
       new THREE.TubeGeometry(initCurve, N, 0.044, 8, false),
@@ -81,29 +88,57 @@ export class XianNode {
     )
     this.group.add(this.glowTube)
 
-    // Haze (wide, very soft)
+    // Haze (wide, very soft) — vertex colors for subtle warmth at peaks
+    this._hazeBaseColor = new THREE.Color(C.cyan)
+    this._hazePeakColor = new THREE.Color(0.6, 0.5, 0.85) // subtle warm purple at peaks
     this._hazeTubeMat = new THREE.MeshBasicMaterial({
-      color: C.cyan, transparent: true, opacity: 0.07,
+      color: 0xffffff, transparent: true, opacity: 0.07,
       side: THREE.BackSide,
+      vertexColors: true,
     })
     this.hazeTube = new THREE.Mesh(
-      new THREE.TubeGeometry(initCurve, N, 0.19, 8, false),
+      new THREE.TubeGeometry(initCurve, N, 0.22, 8, false),
       this._hazeTubeMat,
     )
     this.group.add(this.hazeTube)
   }
 
   _buildDynBeads() {
-    // Dynamic antinodes: bright spheres that chase the actual wave peaks.
+    // Dynamic antinodes: bright spheres + glow halos at wave peaks.
     const geo = new THREE.SphereGeometry(1, 10, 10)
+
+    // Shared glow texture for bead halos
+    const gc = document.createElement('canvas')
+    gc.width = gc.height = 64
+    const gctx = gc.getContext('2d')
+    const gg = gctx.createRadialGradient(32, 32, 0, 32, 32, 32)
+    gg.addColorStop(0, 'rgba(255,255,255,1)')
+    gg.addColorStop(0.25, 'rgba(200,240,255,0.7)')
+    gg.addColorStop(0.6, 'rgba(0,212,255,0.18)')
+    gg.addColorStop(1, 'rgba(0,212,255,0)')
+    gctx.fillStyle = gg
+    gctx.fillRect(0, 0, 64, 64)
+    const glowTex = new THREE.CanvasTexture(gc)
+
     for (let i = 0; i < 5; i++) {
       const mat = new THREE.MeshBasicMaterial({
         color: C.white, transparent: true, opacity: 0,
       })
       const mesh = new THREE.Mesh(geo, mat)
       mesh.scale.setScalar(0.022)
+
+      // Glow halo sprite (child of bead → inherits position, scaled relative)
+      const glowMat = new THREE.SpriteMaterial({
+        map: glowTex, transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false, opacity: 0,
+      })
+      const glow = new THREE.Sprite(glowMat)
+      glow.scale.setScalar(7) // 7x bead radius → soft halo
+      mesh.add(glow)
+
       this.group.add(mesh)
-      this._dynBeads.push({ mesh })
+      this._dynBeads.push({ mesh, glow })
     }
   }
 
@@ -173,10 +208,10 @@ export class XianNode {
   }
 
   _buildTrailParticles() {
-    // 28 particles: spawn at high-amplitude segments, drift outward and fade.
-    // Larger size + higher opacity so they're actually visible.
-    const geo = new THREE.SphereGeometry(0.014, 6, 6)
-    for (let i = 0; i < 28; i++) {
+    // 50 glow particles: spawn at high-amplitude segments, drift outward and fade.
+    // Use additive-blended sprites for visible glow halos.
+    const geo = new THREE.SphereGeometry(0.030, 8, 8)
+    for (let i = 0; i < 60; i++) {
       const mat = new THREE.MeshBasicMaterial({
         color: C.cyan, transparent: true, opacity: 0,
         blending: THREE.AdditiveBlending, depthWrite: false,
@@ -187,11 +222,11 @@ export class XianNode {
         mesh,
         norm:  Math.random(),
         life:  Math.random(),
-        speed: 0.18 + Math.random() * 0.28,
+        speed: 0.14 + Math.random() * 0.22,
         drift: new THREE.Vector3(
-          (Math.random() - 0.5) * 0.32,
-          0.20 + Math.random() * 0.50,
-          (Math.random() - 0.5) * 0.32,
+          (Math.random() - 0.5) * 0.38,
+          0.18 + Math.random() * 0.55,
+          (Math.random() - 0.5) * 0.38,
         ),
       })
     }
@@ -211,13 +246,14 @@ export class XianNode {
 
     this.statusRing.material.color.setHex(col)
     this.light.color.setHex(col)
-    this._glowTubeMat.color.setHex(col)
-    this._hazeTubeMat.color.setHex(col)
-    const coreCol = col === C.cyan   ? 0xe8f8ff
-                  : col === C.green  ? 0xeeffee
-                  : col === C.amber  ? 0xfff4cc
-                  :                   0xf0e8ff
-    this._tubeMat.color.setHex(coreCol)
+    this._glowBaseColor.setHex(col)    // vertex colors drive glow tube color
+    this._hazeBaseColor.setHex(col)   // vertex colors drive haze tube color
+    // Spine base color shifts with state (vertex colors handle the rest)
+    const coreCol = col === C.cyan   ? 0xd4eeff
+                  : col === C.green  ? 0xd4ffdd
+                  : col === C.amber  ? 0xffe8aa
+                  :                   0xe4d8ff
+    this._spineBaseColor.setHex(coreCol)
 
     this.group.remove(this.glowSprite)
     this.glowSprite.material.dispose()
@@ -273,43 +309,43 @@ export class XianNode {
         // H1 + H3 + H5 + H7 — rich multi-modal standing wave, serene
         harmonics: [
           // [n,  w,    phOff,          zScale, speedMult]
-          [1, 1.00,  0,               0.80,   1.000],
-          [3, 0.65,  Math.PI / 2,     0.72,   0.783],
-          [5, 0.32,  Math.PI / 4,     0.60,   1.174],
-          [7, 0.14,  Math.PI * 0.9,   0.48,   0.891],
+          [1, 1.00,  0,               0.95,   1.000],
+          [3, 0.65,  Math.PI / 2,     0.85,   0.783],
+          [5, 0.42,  Math.PI / 4,     0.72,   1.174],
+          [7, 0.24,  Math.PI * 0.9,   0.60,   0.891],
         ],
-        baseSpeed: 0.80, amp: 0.46,
+        baseSpeed: 0.80, amp: 0.48,
       },
       chatting: {
         // H2 + H1 + H4 + H6 — lively, quick, two-loop interference
         harmonics: [
-          [2, 1.00,  0,               0.78,   1.000],
-          [1, 0.35,  Math.PI / 3,     0.70,   1.336],
-          [4, 0.28,  Math.PI * 0.8,   0.55,   0.912],
-          [6, 0.14,  Math.PI * 1.5,   0.44,   1.220],
+          [2, 1.00,  0,               0.92,   1.000],
+          [1, 0.35,  Math.PI / 3,     0.82,   1.336],
+          [4, 0.28,  Math.PI * 0.8,   0.68,   0.912],
+          [6, 0.14,  Math.PI * 1.5,   0.55,   1.220],
         ],
-        baseSpeed: 2.0, amp: 0.40,
+        baseSpeed: 2.0, amp: 0.42,
       },
       working: {
         // H3 + H2 + H5 + H7 — tight fast weave, focused
         harmonics: [
-          [3, 1.00,  0,               0.72,   1.000],
-          [2, 0.38,  Math.PI / 2,     0.64,   0.823],
-          [5, 0.26,  Math.PI * 1.3,   0.52,   1.172],
-          [7, 0.14,  Math.PI * 0.6,   0.40,   0.950],
+          [3, 1.00,  0,               0.85,   1.000],
+          [2, 0.38,  Math.PI / 2,     0.76,   0.823],
+          [5, 0.26,  Math.PI * 1.3,   0.64,   1.172],
+          [7, 0.14,  Math.PI * 0.6,   0.52,   0.950],
         ],
-        baseSpeed: 2.8, amp: 0.33,
+        baseSpeed: 2.8, amp: 0.35,
       },
       thinking: {
         // H1 + H3 + H5 + H7 + H2 at five tempos → deep Lissajous evolution
         harmonics: [
-          [1, 1.00,  0,               0.88,   1.000],
-          [3, 0.60,  Math.PI / 2,     0.76,   0.802],
-          [5, 0.32,  Math.PI / 4,     0.60,   1.175],
-          [7, 0.16,  Math.PI * 0.9,   0.50,   0.891],
-          [2, 0.20,  Math.PI * 1.7,   0.44,   1.431],
+          [1, 1.00,  0,               1.00,   1.000],
+          [3, 0.60,  Math.PI / 2,     0.88,   0.802],
+          [5, 0.32,  Math.PI / 4,     0.72,   1.175],
+          [7, 0.16,  Math.PI * 0.9,   0.60,   0.891],
+          [2, 0.20,  Math.PI * 1.7,   0.55,   1.431],
         ],
-        baseSpeed: 1.0, amp: 0.50,
+        baseSpeed: 1.0, amp: 0.52,
       },
     }
 
@@ -337,15 +373,46 @@ export class XianNode {
 
     this._waveAmps = amps
 
-    const curve   = new THREE.CatmullRomCurve3(this._wavePoints)
-    const rebuild = (tube, r, segs) => {
-      const geo = new THREE.TubeGeometry(curve, N, r, segs, false)
+    const curve = new THREE.CatmullRomCurve3(this._wavePoints)
+
+    // Helper: build tube geometry with per-segment vertex colors
+    const buildColoredTube = (tube, r, radSegs, baseCol, peakCol) => {
+      const geo = new THREE.TubeGeometry(curve, N, r, radSegs, false)
       tube.geometry.dispose()
       tube.geometry = geo
+
+      const vCount = geo.attributes.position.count
+      const colors = new Float32Array(vCount * 3)
+      const vpr = radSegs + 1 // vertices per ring
+
+      for (let s = 0; s <= N; s++) {
+        const ampIdx = Math.min(Math.round(s / N * (N - 1)), N - 1)
+        const ampNorm = Math.min(amps[ampIdx] / 0.30, 1.0)
+        const cr = baseCol.r + (peakCol.r - baseCol.r) * ampNorm
+        const cg = baseCol.g + (peakCol.g - baseCol.g) * ampNorm
+        const cb = baseCol.b + (peakCol.b - baseCol.b) * ampNorm
+
+        for (let v = 0; v < vpr; v++) {
+          const idx = s * vpr + v
+          colors[idx * 3]     = cr
+          colors[idx * 3 + 1] = cg
+          colors[idx * 3 + 2] = cb
+        }
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
     }
-    rebuild(this.spineTube, 0.010, 6)
-    rebuild(this.glowTube,  0.044, 8)
-    rebuild(this.hazeTube,  0.190, 8)
+
+    // Spine tube: cool blue-white → warm white at peaks
+    buildColoredTube(this.spineTube, 0.010, 6,
+      this._spineBaseColor, this._spinePeakColor)
+
+    // Haze tube: subtle warmth shift at peaks
+    buildColoredTube(this.hazeTube, 0.22, 8,
+      this._hazeBaseColor, this._hazePeakColor)
+
+    // Glow tube: state color → warm amber-gold at peaks
+    buildColoredTube(this.glowTube, 0.044, 8,
+      this._glowBaseColor, this._glowPeakColor)
   }
 
   _updateDynBeads(t) {
@@ -367,17 +434,23 @@ export class XianNode {
     peaks.sort((a, b) => b.amp - a.amp)
 
     for (let k = 0; k < this._dynBeads.length; k++) {
-      const { mesh } = this._dynBeads[k]
+      const { mesh, glow } = this._dynBeads[k]
       const peak = peaks[k]
 
       if (peak) {
         mesh.position.copy(this._wavePoints[peak.idx])
-        const r       = 0.018 + peak.amp * 0.050
+        const r       = 0.020 + peak.amp * 0.055
         const pulse   = 0.72 + Math.sin(t * 4.8 + k * 1.7) * 0.28
         mesh.scale.setScalar(r)
-        mesh.material.opacity = Math.min(pulse * Math.min(peak.amp * 2.4, 1.0), 1)
+        mesh.material.opacity = Math.min(pulse * Math.min(peak.amp * 2.8, 1.0), 1)
+        // Glow halo scales and fades with amplitude
+        if (glow) {
+          glow.material.opacity = Math.min(pulse * peak.amp * 2.2, 0.85)
+          glow.scale.setScalar(7 + peak.amp * 5)
+        }
       } else {
         mesh.material.opacity = Math.max(0, mesh.material.opacity - 0.04)
+        if (glow) glow.material.opacity = Math.max(0, glow.material.opacity - 0.04)
       }
     }
   }
@@ -405,11 +478,11 @@ export class XianNode {
         basePos.y + p.drift.y * age,
         basePos.z + p.drift.z * age,
       )
-      // Particles only visible at genuinely high-amplitude sections
-      const minAmp = 0.18
-      const lifeCurve = age < 0.2 ? age / 0.2 : (1 - age) / 0.8
-      const visible = localAmp > minAmp ? (localAmp - minAmp) / (0.5 - minAmp) : 0
-      p.mesh.material.opacity = Math.max(0, Math.min(1, lifeCurve * visible * 3.8))
+      // Lower threshold so particles appear more readily; smooth fade in/out
+      const minAmp = 0.06
+      const lifeCurve = age < 0.15 ? age / 0.15 : Math.pow(1 - age, 1.5)
+      const visible = localAmp > minAmp ? Math.min((localAmp - minAmp) / 0.25, 1.0) : 0
+      p.mesh.material.opacity = Math.max(0, Math.min(0.85, lifeCurve * visible * 4.5))
     }
   }
 
@@ -420,8 +493,8 @@ export class XianNode {
     this.glowSprite.scale.setScalar(0.14 + Math.sin(t * 2.1) * 0.02)
     this.glowSprite.material.opacity = 0.06 + Math.sin(t * 1.8) * 0.02
 
-    this._glowTubeMat.opacity = 0.22 + Math.sin(t * 1.8) * 0.07
-    this._hazeTubeMat.opacity = 0.07 + Math.sin(t * 1.2) * 0.025
+    this._glowTubeMat.opacity = 0.32 + Math.sin(t * 1.8) * 0.08
+    this._hazeTubeMat.opacity = 0.09 + Math.sin(t * 1.2) * 0.03
     this._tubeMat.opacity     = 0.88 + Math.abs(Math.sin(t * 1.0)) * 0.10
 
     if (this._beamMat) {
@@ -435,9 +508,12 @@ export class XianNode {
 
   _updateStatusRing(t) {
     this.statusRing.rotation.z = t * 0.30
-    const p = 1.0 + Math.sin(t * 1.8) * 0.07
+    // Pulse ring with wave energy: bigger/brighter when string amplitude is high
+    const maxAmp = this._waveAmps.length ? Math.max(...this._waveAmps) : 0
+    const energy = Math.min(maxAmp / 0.35, 1.0)
+    const p = 1.0 + Math.sin(t * 1.8) * 0.07 + energy * 0.08
     this.statusRing.scale.set(p, p, 1)
-    this.statusRing.material.opacity = 0.10 + Math.sin(t * 1.4) * 0.06
+    this.statusRing.material.opacity = 0.10 + Math.sin(t * 1.4) * 0.06 + energy * 0.08
   }
 
   _updateLight(t) {
