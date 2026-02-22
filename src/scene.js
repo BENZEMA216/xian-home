@@ -125,23 +125,31 @@ export class Scene {
     const w = window.innerWidth, h = window.innerHeight
     this.camera.aspect = w / h
 
-    // Mobile portrait: widen FOV, raise lookAt to center wave in frame
-    const isMobile = w < 600
-    this.camera.fov = isMobile ? 80 : 55
-    this._orbitRadius = isMobile ? 7.0 : 8.5
-    if (isMobile) {
-      // Narrow the wave to fit portrait viewport (horizontal FOV is ~37°)
-      // Wave local L=4.0 × group scale 1.9 × narrowScale → ~3.6 world fits in frame
-      const narrowScale = 0.44   // world span: 4.0 * 1.9 * 0.44 = 3.34 — fits in portrait FOV
+    // Portrait mobile: narrower viewport — scale wave to fit
+    // Landscape mobile (w > h, small h): treat like desktop — wave already fits horizontally
+    const isPortraitMobile = w < 600 && h > w
+    this.camera.fov = isPortraitMobile ? 80 : 55
+    this._orbitRadius = isPortraitMobile ? 7.0 : 8.5
+    const isLandscapeMobile = h < 520 && w > h
+
+    if (isPortraitMobile) {
+      // Portrait phone: narrow wave to fit ~37° horizontal FOV
+      const narrowScale = 0.54
       this.xian?.group.scale.set(narrowScale, 1.0, narrowScale)
       this.xian?.group.position.setY(1.6)
-      this._orbitRadius = 5.5
+      this._orbitRadius = 5.0
       this._orbitTarget.set(0, 2.35, 0)
       this._orbitGoalV = 0.22
-      // Lock azimuth to exactly perpendicular on mobile (no drift clipping)
       this._orbitGoalH = Math.PI / 2
       this._orbitAngleH = Math.PI / 2
-    } else {
+    } else if (isLandscapeMobile) {
+      // Landscape phone: full wave scale, pull camera close so wave fills frame
+      this.xian?.group.scale.set(1.0, 1.0, 1.0)
+      this.xian?.group.position.setY(1.6)
+      this._orbitRadius = 3.0    // close → wave fills ~80% of wide viewport
+      this._orbitTarget.set(0, 2.1, 0)
+      this._orbitGoalV = 0.28
+    } else { // desktop
       this.xian?.group.scale.set(1.0, 1.0, 1.0)
       this.xian?.group.position.setY(1.6)
       this._orbitRadius = 8.5
@@ -158,7 +166,7 @@ export class Scene {
   // ── Camera orbit ──────────────────────────────────────────
 
   _updateCamera(t) {
-    const isMobile = window.innerWidth < 600
+    const isMobile = window.innerWidth < 600 && window.innerHeight > window.innerWidth
     if (this._autoOrbit && !isMobile) {
       // Desktop: gentle azimuth drift — shows wave from slightly different angles
       this._orbitGoalH = 1.5708 + Math.sin(t * 0.14) * 0.28

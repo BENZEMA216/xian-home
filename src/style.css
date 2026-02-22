@@ -735,3 +735,45 @@ html, body {
   #xianGreeting { display: none; }
   #ambientInput { bottom: 8px; }
 }
+
+/* ── Landscape Mode (phone horizontal) ─────────────────── */
+@media (orientation: landscape) and (max-height: 520px) {
+  /* Topbar: slimmer, no backdrop blur wasted space */
+  #topbar {
+    padding: 6px 12px;
+    background: linear-gradient(to bottom, rgba(6,4,16,0.92) 0%, transparent 100%);
+  }
+  .xian-name { font-size: 14px; letter-spacing: 2px; }
+  .xian-tagline { display: none; }
+
+  /* Status pill: compact, stays in natural topbar position */
+  #statusPill {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+
+  /* Input bar: compact, bottom-center in landscape */
+  #ambientInput {
+    width: min(380px, 52vw);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: max(8px, env(safe-area-inset-bottom));
+    padding: 7px 14px;
+    border-radius: 20px;
+  }
+
+  /* Greeting hidden in landscape (no vertical space) */
+  #xianGreeting { display: none; }
+
+  /* Settings btn stays top-right */
+  /* Chat panel: left side full height */
+  #chatPanel {
+    width: 280px !important;
+    height: 100vh !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    border-radius: 0 !important;
+    max-height: 100vh !important;
+  }
+}
