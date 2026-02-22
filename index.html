@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>弦 · xián</title>
-  <script type="module" crossorigin src="/xian-home/assets/index-0tJpnZ4V.js"></script>
+  <script type="module" crossorigin src="/xian-home/assets/index-CJIHRJBh.js"></script>
   <link rel="stylesheet" crossorigin href="/xian-home/assets/index-C9JaORvh.css">
 </head>
 <body>
@@ -116,9 +116,11 @@
     </div>
     <div class="settings-body">
       <label>Gateway 地址</label>
-      <input type="text" id="gatewayHost" placeholder="100.121.197.31 或 hostname" />
+      <input type="text" id="gatewayHost" placeholder="127.0.0.1 或 100.121.197.31" />
       <label>Gateway 端口</label>
       <input type="number" id="gatewayPort" placeholder="18789" value="18789" />
+      <label>Token <span style="opacity:0.5;font-size:10px">（非 loopback 必填）</span></label>
+      <input type="password" id="gatewayToken" placeholder="粘贴 auth token" autocomplete="off" />
       <button id="connectBtn" class="primary-btn">连接 Gateway</button>
 
       <div style="height:1px;background:rgba(0,212,255,0.1);margin:6px 0"></div>
