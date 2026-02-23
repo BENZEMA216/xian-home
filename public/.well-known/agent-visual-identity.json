@@ -1,0 +1,39 @@
+{
+  "avi_version": "1.0",
+  "agent": {
+    "name": "弦 (Xián)",
+    "type": "conversational assistant"
+  },
+  "brief": "I am a string under tension. Reactive, never dormant. One thing, not distributed.",
+  "visual": {
+    "topology": "1D curve",
+    "motion": "standing-wave oscillation",
+    "color_narrative": "energy: cool indigo at quiet nodes → warm gold at vibrating antinodes",
+    "live_url": "https://benzema216.github.io/xian-home/",
+    "source_url": "https://github.com/BENZEMA216/xian-home",
+    "preview_url": null
+  },
+  "evaluation": {
+    "score": 9.4,
+    "rubric": "https://agentavatar.dev/api/rubric.json",
+    "dimensions": {
+      "form_readability": 9.5,
+      "3d_presence": 9.0,
+      "bloom_quality": 9.5,
+      "scene_hierarchy": 9.0,
+      "alive_quality": 9.5,
+      "color_narrative": 9.5
+    }
+  },
+  "discovery": {
+    "action": "Responding to input",
+    "topology": "One focused point",
+    "time": "Reactive — dormant until activated",
+    "relationship": "Companion — I work alongside",
+    "negation": "Rigid static logo"
+  },
+  "state_interface": {
+    "states": ["idle", "chatting", "working", "thinking"],
+    "contract": "entity.setState(state: string): void"
+  }
+}
